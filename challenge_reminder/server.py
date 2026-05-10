@@ -14,7 +14,7 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             self._send_json(200, self.store.list_issues())
             return
 
-        if self.path_info.startswith("/api/"):
+        if self._is_api_path():
             self._send_json_error(404, "not found")
             return
 
@@ -98,6 +98,9 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
         if len(parts) == 4 and parts[:2] == ["api", "issues"]:
             return parts[2], parts[3]
         return None, None
+
+    def _is_api_path(self):
+        return self.path_info == "/api" or self.path_info.startswith("/api/")
 
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", 0))
