@@ -1,6 +1,8 @@
 import errno
+import sys
 import threading
 import time
+import traceback
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -42,21 +44,48 @@ def find_server(port=DEFAULT_PORT):
     raise RuntimeError(message)
 
 
-def reminder_loop(store, interval_seconds=20, stop_event=None, store_lock=None):
+def reminder_loop(
+    store,
+    interval_seconds=20,
+    stop_event=None,
+    store_lock=None,
+    notify=notify_issue,
+    sleep=time.sleep,
+    run_once=False,
+    on_error=None,
+):
+    on_error = on_error or _report_background_error
     while stop_event is None or not stop_event.is_set():
-        now = datetime.now().astimezone()
-        lock = store_lock or _NullLock()
+        try:
+            run_reminder_cycle(store, store_lock=store_lock, notify=notify, on_error=on_error)
+        except Exception:
+            on_error()
 
-        with lock:
-            issues = due_issues(store.list_issues(), now)
-            for issue in issues:
-                notify_issue(issue)
-                store.mark_notified(issue["id"])
+        if run_once:
+            return
 
         if stop_event is None:
-            time.sleep(interval_seconds)
+            sleep(interval_seconds)
         else:
             stop_event.wait(interval_seconds)
+
+
+def run_reminder_cycle(store, store_lock=None, notify=notify_issue, on_error=None):
+    on_error = on_error or _report_background_error
+    now = datetime.now().astimezone()
+    lock = store_lock or _NullLock()
+
+    with lock:
+        issues = due_issues(store.list_issues(), now)
+
+    for issue in issues:
+        try:
+            if notify(issue) is not True:
+                continue
+            with lock:
+                store.mark_notified(issue["id"])
+        except Exception:
+            on_error()
 
 
 def main():
@@ -97,6 +126,11 @@ def main():
 
 def interval_join_timeout():
     return 5
+
+
+def _report_background_error():
+    print("提醒后台任务发生错误，已跳过并继续运行：", file=sys.stderr)
+    traceback.print_exc()
 
 
 class _NullLock:
