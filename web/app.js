@@ -19,6 +19,9 @@ const elements = {
   changeDataLocation: document.querySelector("#changeDataLocation"),
   manualDataFolder: document.querySelector("#manualDataFolder"),
   saveManualDataFolder: document.querySelector("#saveManualDataFolder"),
+  startupStatus: document.querySelector("#startupStatus"),
+  enableStartup: document.querySelector("#enableStartup"),
+  disableStartup: document.querySelector("#disableStartup"),
   issueList: document.querySelector("#issueList"),
   filterButtons: document.querySelectorAll(".filter-button"),
 };
@@ -140,6 +143,31 @@ async function loadDataLocation() {
   } catch (error) {
     elements.dataLocation.textContent = "数据位置加载失败。";
     setAlert(`加载数据位置失败：${error.message}`, "error");
+  }
+}
+
+function renderStartup(info) {
+  if (!info?.available) {
+    elements.startupStatus.textContent = info?.message || "当前版本不支持开机自动启动。";
+    elements.enableStartup.disabled = true;
+    elements.disableStartup.disabled = true;
+    return;
+  }
+
+  elements.startupStatus.textContent = info.enabled ? "当前状态：已开启" : "当前状态：未开启";
+  elements.enableStartup.disabled = info.enabled;
+  elements.disableStartup.disabled = !info.enabled;
+}
+
+async function loadStartup() {
+  try {
+    const info = await apiRequest("/api/startup");
+    renderStartup(info);
+  } catch (error) {
+    elements.startupStatus.textContent = "开机启动状态加载失败。";
+    elements.enableStartup.disabled = true;
+    elements.disableStartup.disabled = true;
+    setAlert(`加载开机启动状态失败：${error.message}`, "error");
   }
 }
 
@@ -390,12 +418,30 @@ async function handleSaveManualDataFolder() {
   }
 }
 
+async function setStartupEnabled(enabled) {
+  elements.enableStartup.disabled = true;
+  elements.disableStartup.disabled = true;
+  try {
+    const info = await apiRequest("/api/startup", {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    });
+    renderStartup(info);
+    setAlert(enabled ? "已开启开机自动启动。" : "已关闭开机自动启动。");
+  } catch (error) {
+    setAlert(`设置开机启动失败：${error.message}`, "error");
+    await loadStartup();
+  }
+}
+
 elements.form.addEventListener("submit", handleSubmit);
 elements.cancelEdit.addEventListener("click", resetForm);
 elements.issueList.addEventListener("click", handleListClick);
 elements.changeDataLocation.addEventListener("click", handleChangeDataLocation);
 elements.saveManualDataFolder.addEventListener("click", handleSaveManualDataFolder);
+elements.enableStartup.addEventListener("click", () => setStartupEnabled(true));
+elements.disableStartup.addEventListener("click", () => setStartupEnabled(false));
 document.querySelector(".filters").addEventListener("click", handleFilterClick);
 
-Promise.all([loadIssues(), loadDataLocation()]).then(pollDueReminders);
+Promise.all([loadIssues(), loadDataLocation(), loadStartup()]).then(pollDueReminders);
 window.setInterval(pollDueReminders, 30000);

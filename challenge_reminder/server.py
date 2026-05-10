@@ -13,6 +13,7 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
     store = None
     store_lock = None
     web_dir = None
+    startup_manager = None
 
     def do_GET(self):
         if self.path_info == "/api/issues":
@@ -35,6 +36,13 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             with self.store_lock:
                 info = self.store.data_location_info()
             self._send_json(200, info)
+            return
+
+        if self.path_info == "/api/startup":
+            if self.startup_manager is None:
+                self._send_json_error(404, "not found")
+                return
+            self._send_json(200, self.startup_manager.status())
             return
 
         if self._is_api_path():
@@ -93,6 +101,29 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             try:
                 with self.store_lock:
                     info = self.store.set_data_folder(folder)
+            except OSError as exc:
+                self._send_json_error(400, str(exc))
+                return
+
+            self._send_json(200, info)
+            return
+
+        if self.path_info == "/api/startup":
+            if self.startup_manager is None:
+                self._send_json_error(404, "not found")
+                return
+
+            payload = self._read_json_body()
+            if payload is None:
+                return
+
+            enabled = payload.get("enabled")
+            if not isinstance(enabled, bool):
+                self._send_json_error(400, "enabled must be boolean")
+                return
+
+            try:
+                info = self.startup_manager.set_enabled(enabled)
             except OSError as exc:
                 self._send_json_error(400, str(exc))
                 return
@@ -260,11 +291,12 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
         return
 
 
-def create_server(host, port, store, web_dir):
+def create_server(host, port, store, web_dir, startup_manager=None):
     class Handler(ChallengeReminderHandler):
         pass
 
     Handler.store = store
     Handler.store_lock = threading.RLock()
     Handler.web_dir = Path(web_dir)
+    Handler.startup_manager = startup_manager
     return ThreadingHTTPServer((host, port), Handler)

@@ -51,6 +51,23 @@
         </div>
       </section>
 
+      <section class="panel startup-panel" aria-labelledby="startupTitle">
+        <div class="panel-heading">
+          <span class="badge">启动设置</span>
+          <h2 id="startupTitle">开机自动启动</h2>
+        </div>
+        <div class="startup-row">
+          <div>
+            <div id="startupStatus" class="startup-status">正在加载开机启动状态...</div>
+            <p class="startup-tip">开启后请不要移动 exe 文件位置，否则开机启动会失效。</p>
+          </div>
+          <div class="startup-actions">
+            <button type="button" id="enableStartup" class="primary-button">开启开机启动</button>
+            <button type="button" id="disableStartup" class="ghost-button">关闭开机启动</button>
+          </div>
+        </div>
+      </section>
+
       <section class="panel form-panel" aria-labelledby="formTitle">
         <div class="panel-heading">
           <span class="badge">编辑区</span>

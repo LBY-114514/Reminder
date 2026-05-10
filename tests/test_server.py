@@ -118,6 +118,25 @@ class RaceyStore(FakeStore):
         return issue
 
 
+class FakeStartupManager:
+    def __init__(self):
+        self.enabled = False
+        self.actions = []
+
+    def status(self):
+        return {
+            "available": True,
+            "enabled": self.enabled,
+            "path": "C:\\Startup\\挑战杯提醒.cmd",
+            "app_path": "D:\\Apps\\挑战杯提醒.exe",
+        }
+
+    def set_enabled(self, enabled):
+        self.enabled = enabled
+        self.actions.append(enabled)
+        return self.status()
+
+
 class ServerTest(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -127,7 +146,14 @@ class ServerTest(unittest.TestCase):
         (self.web_dir / "app.js").write_text("console.log('ok');", encoding="utf-8")
         (Path(self.temp_dir.name) / "secret.txt").write_text("secret", encoding="utf-8")
 
-        self.server = create_server("127.0.0.1", 0, FakeStore(), self.web_dir)
+        self.startup_manager = FakeStartupManager()
+        self.server = create_server(
+            "127.0.0.1",
+            0,
+            FakeStore(),
+            self.web_dir,
+            startup_manager=self.startup_manager,
+        )
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.host, self.port = self.server.server_address
@@ -282,6 +308,53 @@ class ServerTest(unittest.TestCase):
         payload = self.assert_json_response(response, data, 200)
         self.assertEqual("C:\\Data\\issues.json", payload["path"])
         self.assertFalse(payload["configured"])
+
+    def test_get_startup_returns_status(self):
+        response, data = self.request("GET", "/api/startup")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual(
+            {
+                "available": True,
+                "enabled": False,
+                "path": "C:\\Startup\\挑战杯提醒.cmd",
+                "app_path": "D:\\Apps\\挑战杯提醒.exe",
+            },
+            payload,
+        )
+
+    def test_post_startup_enables_and_disables_startup(self):
+        response, data = self.request(
+            "POST",
+            "/api/startup",
+            body=json.dumps({"enabled": True}),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertTrue(payload["enabled"])
+
+        response, data = self.request(
+            "POST",
+            "/api/startup",
+            body=json.dumps({"enabled": False}),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertFalse(payload["enabled"])
+        self.assertEqual([True, False], self.startup_manager.actions)
+
+    def test_post_startup_requires_boolean_enabled(self):
+        response, data = self.request(
+            "POST",
+            "/api/startup",
+            body=json.dumps({"enabled": "yes"}),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 400)
+        self.assertEqual({"error": "enabled must be boolean"}, payload)
 
     def test_post_data_location_select_returns_selected_folder_info(self):
         response, data = self.request("POST", "/api/data-location/select")

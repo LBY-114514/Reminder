@@ -12,6 +12,7 @@ from challenge_reminder.data_location import ConfigurableIssueStore
 from challenge_reminder.notifications import notify_issue
 from challenge_reminder.reminders import due_issues
 from challenge_reminder.server import create_server
+from challenge_reminder.startup import StartupManager
 
 
 APP_NAME = "ChallengeCupReminder"
@@ -64,11 +65,12 @@ WEB_DIR = get_web_dir()
 
 def find_server(port=DEFAULT_PORT):
     store = ConfigurableIssueStore(get_data_path(), get_config_path())
+    startup_manager = StartupManager(sys.executable, packaged=is_packaged())
     last_error = None
 
     for candidate in range(port, port + PORT_ATTEMPTS):
         try:
-            server = create_server(HOST, candidate, store, get_web_dir())
+            server = create_server(HOST, candidate, store, get_web_dir(), startup_manager=startup_manager)
         except OSError as exc:
             last_error = exc
             if exc.errno in (errno.EADDRINUSE, errno.EACCES, errno.WSAEADDRINUSE):
