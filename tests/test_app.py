@@ -3,6 +3,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
+import app
 from app import reminder_loop
 from challenge_reminder.notifications import notify_issue
 
@@ -102,6 +103,35 @@ class NotificationTests(unittest.TestCase):
             return_value=RunningProcess(),
         ):
             self.assertTrue(notify_issue(due_issue("running")))
+
+
+class PackagedPathTests(unittest.TestCase):
+    def test_source_run_uses_project_data_and_web_dirs(self):
+        with patch("app.sys.frozen", False, create=True):
+            self.assertEqual(app.PROJECT_ROOT / "data" / "issues.json", app.get_data_path())
+            self.assertEqual(app.PROJECT_ROOT / "web", app.get_web_dir())
+
+    def test_packaged_run_uses_meipass_for_web_and_local_app_data_for_data(self):
+        with patch("app.sys.frozen", True, create=True), patch(
+            "app.sys._MEIPASS",
+            "C:\\Temp\\_MEI123",
+            create=True,
+        ), patch.dict("app.os.environ", {"LOCALAPPDATA": "C:\\Users\\Test\\AppData\\Local"}):
+            self.assertEqual(
+                app.Path("C:\\Temp\\_MEI123") / "web",
+                app.get_web_dir(),
+            )
+            self.assertEqual(
+                app.Path("C:\\Users\\Test\\AppData\\Local") / app.APP_NAME / "data" / "issues.json",
+                app.get_data_path(),
+            )
+
+    def test_browser_opens_by_default_unless_disabled_for_tests(self):
+        with patch.dict("app.os.environ", {}, clear=True):
+            self.assertTrue(app.should_open_browser())
+
+        with patch.dict("app.os.environ", {"CHALLENGE_REMINDER_NO_BROWSER": "1"}):
+            self.assertFalse(app.should_open_browser())
 
 
 def due_issue(issue_id):

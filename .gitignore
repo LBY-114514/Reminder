@@ -9,3 +9,7 @@ data/.issues.json.*.tmp
 
 .superpowers/brainstorm/
 .worktrees/
+
+build/
+dist/
+*.spec

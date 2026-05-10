@@ -1,4 +1,5 @@
 import errno
+import os
 import sys
 import threading
 import time
@@ -13,21 +14,57 @@ from challenge_reminder.server import create_server
 from challenge_reminder.store import IssueStore
 
 
+APP_NAME = "ChallengeCupReminder"
 PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_PATH = PROJECT_ROOT / "data" / "issues.json"
-WEB_DIR = PROJECT_ROOT / "web"
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8787
 PORT_ATTEMPTS = 20
+DATA_PATH = None
+WEB_DIR = None
+
+
+def is_packaged():
+    return bool(getattr(sys, "frozen", False))
+
+
+def get_resource_root():
+    if is_packaged() and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)
+    return PROJECT_ROOT
+
+
+def get_data_root():
+    if is_packaged():
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            return Path(local_app_data) / APP_NAME
+        return Path.home() / APP_NAME
+    return PROJECT_ROOT
+
+
+def get_data_path():
+    return get_data_root() / "data" / "issues.json"
+
+
+def get_web_dir():
+    return get_resource_root() / "web"
+
+
+def should_open_browser():
+    return os.environ.get("CHALLENGE_REMINDER_NO_BROWSER") != "1"
+
+
+DATA_PATH = get_data_path()
+WEB_DIR = get_web_dir()
 
 
 def find_server(port=DEFAULT_PORT):
-    store = IssueStore(DATA_PATH)
+    store = IssueStore(get_data_path())
     last_error = None
 
     for candidate in range(port, port + PORT_ATTEMPTS):
         try:
-            server = create_server(HOST, candidate, store, WEB_DIR)
+            server = create_server(HOST, candidate, store, get_web_dir())
         except OSError as exc:
             last_error = exc
             if exc.errno in (errno.EADDRINUSE, errno.EACCES, errno.WSAEADDRINUSE):
@@ -109,8 +146,9 @@ def main():
 
     url = f"http://localhost:{port}"
     print(f"挑战杯提醒已启动：{url}")
-    print(f"数据文件：{DATA_PATH}")
-    webbrowser.open(url)
+    print(f"数据文件：{get_data_path()}")
+    if should_open_browser():
+        webbrowser.open(url)
 
     try:
         while True:

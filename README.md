@@ -109,6 +109,54 @@ python -m unittest discover -s tests -v
 
 如果你的环境名不是 `forskills`，把第一行换成自己的环境名即可；如果不用 Conda，直接运行第二行。
 
+## 打包成单文件 exe
+
+如果想让别人下载一个 exe 就能使用，可以用 PyInstaller 打包。
+
+### 安装打包工具
+
+```bat
+pip install pyinstaller
+```
+
+### 执行打包
+
+双击：
+
+```text
+build_exe.bat
+```
+
+或在命令行运行：
+
+```bat
+build_exe.bat
+```
+
+打包成功后会生成：
+
+```text
+dist/挑战杯提醒.exe
+```
+
+把这个 exe 发给别人即可。对方不需要安装 Python 或 Conda。
+
+### exe 版数据位置
+
+源码运行时，数据保存在项目里的：
+
+```text
+data/issues.json
+```
+
+单文件 exe 运行时，数据会保存在当前 Windows 用户目录下：
+
+```text
+%LOCALAPPDATA%/ChallengeCupReminder/data/issues.json
+```
+
+这样可以避免 exe 每次启动时因为临时解压目录变化导致数据丢失。
+
 ## GitHub 上传提示
 
 提交代码时可以上传启动脚本、README、测试和应用代码，但不要上传本地数据文件：
