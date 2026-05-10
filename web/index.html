@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>挑战杯提醒助手</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Challenge Cup Reminder</p>
+          <h1>挑战杯事项提醒</h1>
+          <p class="hero-copy">记录申报、材料和截止时间，按时处理每一条提醒。</p>
+        </div>
+      </header>
+
+      <section class="notice-grid" aria-label="提醒概览">
+        <article class="panel next-panel">
+          <div class="panel-heading">
+            <span class="badge">下一条</span>
+            <h2>下一条待处理提醒</h2>
+          </div>
+          <div id="nextReminder" class="next-reminder">正在加载提醒...</div>
+        </article>
+
+        <article class="panel alert-panel">
+          <div class="panel-heading">
+            <span class="badge badge-hot">程序内提醒</span>
+            <h2>到期提醒</h2>
+          </div>
+          <div id="appAlert" class="app-alert" role="status" aria-live="polite">
+            暂无到期提醒。
+          </div>
+        </article>
+      </section>
+
+      <section class="panel form-panel" aria-labelledby="formTitle">
+        <div class="panel-heading">
+          <span class="badge">编辑区</span>
+          <h2 id="formTitle">新增提醒</h2>
+        </div>
+        <form id="issueForm" class="issue-form">
+          <input type="hidden" id="issueId" />
+          <label>
+            标题
+            <input id="title" name="title" type="text" maxlength="100" required placeholder="例如：提交项目申报书" />
+          </label>
+          <label>
+            提醒时间
+            <input id="remindAt" name="remindAt" type="datetime-local" required />
+          </label>
+          <label class="wide">
+            详情
+            <textarea id="detail" name="detail" rows="4" placeholder="补充说明、材料清单或负责人"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary-button">保存提醒</button>
+            <button type="button" id="cancelEdit" class="ghost-button" hidden>取消编辑</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel list-panel" aria-labelledby="listTitle">
+        <div class="list-header">
+          <div class="panel-heading">
+            <span class="badge">事项列表</span>
+            <h2 id="listTitle">全部问题</h2>
+          </div>
+          <div class="filters" role="group" aria-label="筛选问题">
+            <button type="button" class="filter-button active" data-filter="all">全部</button>
+            <button type="button" class="filter-button" data-filter="pending">待处理</button>
+            <button type="button" class="filter-button" data-filter="done">已处理</button>
+          </div>
+        </div>
+        <div id="issueList" class="issue-list">正在加载问题列表...</div>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
