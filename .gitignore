@@ -7,4 +7,5 @@ data/issues.json
 data/issues.json.corrupt-*
 
 .superpowers/brainstorm/
+.worktrees
 .worktrees/
