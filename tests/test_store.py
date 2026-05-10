@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from challenge_reminder.store import IssueStore
 
@@ -100,6 +101,42 @@ class IssueStoreTest(unittest.TestCase):
         backups = list(self.path.parent.glob("issues.json.corrupt-*"))
         self.assertEqual(1, len(backups))
         self.assertEqual("{broken", backups[0].read_text(encoding="utf-8"))
+
+    def test_non_list_json_is_backed_up_and_recovered_as_empty_array(self):
+        self.path.write_text('{"title": "not a list"}', encoding="utf-8")
+
+        store = IssueStore(self.path)
+
+        self.assertEqual([], store.list_issues())
+        self.assertEqual([], self.read_issues())
+        backups = list(self.path.parent.glob("issues.json.corrupt-*"))
+        self.assertEqual(1, len(backups))
+        self.assertEqual('{"title": "not a list"}', backups[0].read_text(encoding="utf-8"))
+
+    def test_write_uses_temp_file_and_atomic_replace(self):
+        store = IssueStore(self.path)
+
+        with patch("challenge_reminder.store.Path.replace", autospec=True) as replace:
+            store.add_issue("准备材料", "", "2026-05-10T18:30:00+08:00")
+
+        replace.assert_called_once()
+        temp_path, target_path = replace.call_args[0]
+        self.assertEqual(self.path, target_path)
+        self.assertEqual(self.path.parent, temp_path.parent)
+        self.assertTrue(temp_path.name.startswith(f".{self.path.name}."))
+
+    def test_update_issue_ignores_status_and_notified_fields(self):
+        store = IssueStore(self.path)
+        issue = store.add_issue("准备材料", "", "2026-05-10T18:30:00+08:00")
+
+        updated = store.update_issue(
+            issue["id"],
+            {"status": "done", "notified": "false", "title": "更新标题"},
+        )
+
+        self.assertEqual("更新标题", updated["title"])
+        self.assertEqual("pending", updated["status"])
+        self.assertFalse(updated["notified"])
 
     def test_empty_title_raises_value_error(self):
         store = IssueStore(self.path)

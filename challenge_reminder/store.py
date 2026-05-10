@@ -45,10 +45,6 @@ class IssueStore:
             self._validate_remind_at(fields["remind_at"])
             issue["remind_at"] = fields["remind_at"]
             issue["notified"] = False
-        if "status" in fields:
-            issue["status"] = fields["status"]
-        if "notified" in fields:
-            issue["notified"] = bool(fields["notified"])
 
         issue["updated_at"] = self._now()
         self._write(issues)
@@ -61,10 +57,20 @@ class IssueStore:
         self._write(remaining)
 
     def mark_done(self, issue_id):
-        return self.update_issue(issue_id, {"status": "done"})
+        issues = self._read()
+        issue = self._find(issues, issue_id)
+        issue["status"] = "done"
+        issue["updated_at"] = self._now()
+        self._write(issues)
+        return issue
 
     def mark_notified(self, issue_id):
-        return self.update_issue(issue_id, {"notified": True})
+        issues = self._read()
+        issue = self._find(issues, issue_id)
+        issue["notified"] = True
+        issue["updated_at"] = self._now()
+        self._write(issues)
+        return issue
 
     def _ensure_file(self):
         if not self.path.exists():
@@ -74,24 +80,30 @@ class IssueStore:
         try:
             issues = self._read()
         except json.JSONDecodeError:
-            backup = self.path.with_name(
-                f"{self.path.name}.corrupt-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            )
-            shutil.copy2(self.path, backup)
+            self._backup_corrupt_file()
             self._write([])
             return
 
         if not isinstance(issues, list):
+            self._backup_corrupt_file()
             self._write([])
+
+    def _backup_corrupt_file(self):
+        backup = self.path.with_name(
+            f"{self.path.name}.corrupt-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        )
+        shutil.copy2(self.path, backup)
 
     def _read(self):
         with self.path.open("r", encoding="utf-8") as file:
             return json.load(file)
 
     def _write(self, issues):
-        with self.path.open("w", encoding="utf-8") as file:
+        temp_path = self.path.with_name(f".{self.path.name}.{uuid4().hex}.tmp")
+        with temp_path.open("w", encoding="utf-8") as file:
             json.dump(issues, file, ensure_ascii=False, indent=2)
             file.write("\n")
+        temp_path.replace(self.path)
 
     def _find(self, issues, issue_id):
         for issue in issues:
