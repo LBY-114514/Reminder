@@ -102,6 +102,7 @@ h2 {
 
 .next-panel,
 .alert-panel,
+.data-panel,
 .form-panel,
 .list-panel {
   padding: 22px;
@@ -133,12 +134,30 @@ h2 {
 }
 
 .next-reminder,
-.app-alert {
+.app-alert,
+.data-location {
   padding: 16px;
   border-radius: 16px;
   color: var(--muted);
   background: var(--panel-strong);
   line-height: 1.6;
+}
+
+.data-panel {
+  margin-bottom: 18px;
+}
+
+.data-location-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.data-location {
+  overflow-wrap: anywhere;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.92rem;
 }
 
 .app-alert.has-error {
@@ -329,6 +348,7 @@ textarea {
 
   .hero,
   .notice-grid,
+  .data-location-row,
   .issue-form,
   .list-header,
   .issue-top {

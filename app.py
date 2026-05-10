@@ -8,10 +8,10 @@ import webbrowser
 from datetime import datetime
 from pathlib import Path
 
+from challenge_reminder.data_location import ConfigurableIssueStore
 from challenge_reminder.notifications import notify_issue
 from challenge_reminder.reminders import due_issues
 from challenge_reminder.server import create_server
-from challenge_reminder.store import IssueStore
 
 
 APP_NAME = "ChallengeCupReminder"
@@ -46,6 +46,10 @@ def get_data_path():
     return get_data_root() / "data" / "issues.json"
 
 
+def get_config_path():
+    return get_data_root() / "config.json"
+
+
 def get_web_dir():
     return get_resource_root() / "web"
 
@@ -59,7 +63,7 @@ WEB_DIR = get_web_dir()
 
 
 def find_server(port=DEFAULT_PORT):
-    store = IssueStore(get_data_path())
+    store = ConfigurableIssueStore(get_data_path(), get_config_path())
     last_error = None
 
     for candidate in range(port, port + PORT_ATTEMPTS):
@@ -146,7 +150,7 @@ def main():
 
     url = f"http://localhost:{port}"
     print(f"挑战杯提醒已启动：{url}")
-    print(f"数据文件：{get_data_path()}")
+    print(f"数据文件：{store.current_data_path()}")
     if should_open_browser():
         webbrowser.open(url)
 

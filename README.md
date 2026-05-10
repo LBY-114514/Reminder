@@ -96,6 +96,8 @@ data/issues.json
 
 该文件包含本地个人数据，已在 `.gitignore` 中忽略，不会上传到 GitHub。`data/.gitkeep` 仅用于保留空目录。
 
+页面里会显示当前 JSON 保存路径。点击 **更改保存位置** 后，可以选择一个文件夹；程序会把 `issues.json` 保存到该文件夹中，并记住这个选择。选择新位置时，如果新文件夹里还没有 `issues.json`，程序会自动把旧数据迁移过去。
+
 如果数据文件损坏，程序会备份为类似 `data/issues.json.corrupt-YYYYMMDDHHMMSS` 的文件，并重新创建空数据文件；这些备份文件也不会上传。
 
 ## 测试命令
@@ -156,6 +158,14 @@ data/issues.json
 ```
 
 这样可以避免 exe 每次启动时因为临时解压目录变化导致数据丢失。
+
+如果用户在页面里更改了 JSON 保存位置，exe 会把配置记在：
+
+```text
+%LOCALAPPDATA%/ChallengeCupReminder/config.json
+```
+
+以后启动会继续使用用户选择的保存路径。
 
 ## GitHub 上传提示
 

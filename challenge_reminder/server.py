@@ -28,6 +28,15 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             self._send_json(200, issues)
             return
 
+        if self.path_info == "/api/data-location":
+            if not hasattr(self.store, "data_location_info"):
+                self._send_json_error(404, "not found")
+                return
+            with self.store_lock:
+                info = self.store.data_location_info()
+            self._send_json(200, info)
+            return
+
         if self._is_api_path():
             self._send_json_error(404, "not found")
             return
@@ -52,6 +61,19 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
                 return
 
             self._send_json(201, issue)
+            return
+
+        if self.path_info == "/api/data-location/select":
+            if not hasattr(self.store, "choose_data_folder"):
+                self._send_json_error(404, "not found")
+                return
+            try:
+                with self.store_lock:
+                    info = self.store.choose_data_folder()
+            except OSError as exc:
+                self._send_json_error(400, str(exc))
+                return
+            self._send_json(200, info)
             return
 
         issue_id, action = self._issue_route()

@@ -4,8 +4,10 @@ __pycache__/
 .mypy_cache/
 
 data/issues.json
+data/config.json
 data/issues.json.corrupt-*
 data/.issues.json.*.tmp
+data/.config.json.*.tmp
 
 .superpowers/brainstorm/
 .worktrees/

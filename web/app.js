@@ -15,6 +15,8 @@ const elements = {
   cancelEdit: document.querySelector("#cancelEdit"),
   nextReminder: document.querySelector("#nextReminder"),
   appAlert: document.querySelector("#appAlert"),
+  dataLocation: document.querySelector("#dataLocation"),
+  changeDataLocation: document.querySelector("#changeDataLocation"),
   issueList: document.querySelector("#issueList"),
   filterButtons: document.querySelectorAll(".filter-button"),
 };
@@ -120,6 +122,20 @@ function setAlert(message, type = "info") {
 function renderLoadFailure() {
   elements.nextReminder.textContent = "加载失败";
   elements.issueList.innerHTML = '<div class="empty-state">加载失败，请确认程序是否正常运行。</div>';
+}
+
+function renderDataLocation(info) {
+  elements.dataLocation.textContent = info?.path || "暂未获取到数据位置。";
+}
+
+async function loadDataLocation() {
+  try {
+    const info = await apiRequest("/api/data-location");
+    renderDataLocation(info);
+  } catch (error) {
+    elements.dataLocation.textContent = "数据位置加载失败。";
+    setAlert(`加载数据位置失败：${error.message}`, "error");
+  }
 }
 
 function renderNextReminder() {
@@ -320,10 +336,32 @@ async function pollDueReminders() {
   }
 }
 
+async function handleChangeDataLocation() {
+  elements.changeDataLocation.disabled = true;
+  try {
+    setAlert("请选择新的 JSON 保存文件夹。");
+    const info = await apiRequest("/api/data-location/select", { method: "POST" });
+    renderDataLocation(info);
+    await loadIssues();
+    if (info.cancelled) {
+      setAlert("已取消更改数据位置。");
+    } else if (info.migrated) {
+      setAlert("数据位置已更改，旧数据已迁移到新文件夹。");
+    } else {
+      setAlert("数据位置已更改。");
+    }
+  } catch (error) {
+    setAlert(`更改数据位置失败：${error.message}`, "error");
+  } finally {
+    elements.changeDataLocation.disabled = false;
+  }
+}
+
 elements.form.addEventListener("submit", handleSubmit);
 elements.cancelEdit.addEventListener("click", resetForm);
 elements.issueList.addEventListener("click", handleListClick);
+elements.changeDataLocation.addEventListener("click", handleChangeDataLocation);
 document.querySelector(".filters").addEventListener("click", handleFilterClick);
 
-loadIssues().then(pollDueReminders);
+Promise.all([loadIssues(), loadDataLocation()]).then(pollDueReminders);
 window.setInterval(pollDueReminders, 30000);

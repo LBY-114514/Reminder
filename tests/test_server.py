@@ -14,6 +14,7 @@ from challenge_reminder.server import create_server
 
 class FakeStore:
     def __init__(self):
+        self.data_location_selected = False
         self.issues = [
             {
                 "id": "issue-1",
@@ -66,6 +67,25 @@ class FakeStore:
             if issue["id"] == issue_id:
                 return issue
         raise KeyError(issue_id)
+
+    def data_location_info(self):
+        return {
+            "path": "C:\\Data\\issues.json",
+            "folder": "C:\\Data",
+            "configured": False,
+            "config_path": "C:\\Config\\config.json",
+        }
+
+    def choose_data_folder(self):
+        self.data_location_selected = True
+        return {
+            "path": "D:\\Chosen\\issues.json",
+            "folder": "D:\\Chosen",
+            "configured": True,
+            "config_path": "C:\\Config\\config.json",
+            "cancelled": False,
+            "migrated": True,
+        }
 
 
 class RaceyStore(FakeStore):
@@ -245,6 +265,21 @@ class ServerTest(unittest.TestCase):
 
         payload = self.assert_json_response(response, data, 200)
         self.assertEqual([], payload)
+
+    def test_get_data_location_returns_json(self):
+        response, data = self.request("GET", "/api/data-location")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual("C:\\Data\\issues.json", payload["path"])
+        self.assertFalse(payload["configured"])
+
+    def test_post_data_location_select_returns_selected_folder_info(self):
+        response, data = self.request("POST", "/api/data-location/select")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual("D:\\Chosen\\issues.json", payload["path"])
+        self.assertTrue(payload["configured"])
+        self.assertTrue(self.server.RequestHandlerClass.store.data_location_selected)
 
     def raw_request(self, request):
         with socket.create_connection((self.host, self.port), timeout=5) as client:
