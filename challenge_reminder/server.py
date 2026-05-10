@@ -87,12 +87,26 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
 
         self._send_json(200, {"ok": True})
 
+    def do_HEAD(self):
+        if self._is_api_path():
+            self._send_json_error(405, "method not allowed", include_body=False)
+            return
+
+        self.send_error(405)
+
+    def do_PATCH(self):
+        if self._is_api_path():
+            self._send_json_error(405, "method not allowed")
+            return
+
+        self.send_error(405)
+
     @property
     def path_info(self):
         return urlparse(self.path).path
 
     def _issue_route(self):
-        parts = [part for part in self.path_info.split("/") if part]
+        parts = self.path_info.lstrip("/").split("/")
         if len(parts) == 3 and parts[:2] == ["api", "issues"]:
             return parts[2], None
         if len(parts) == 4 and parts[:2] == ["api", "issues"]:
@@ -103,7 +117,12 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
         return self.path_info == "/api" or self.path_info.startswith("/api/")
 
     def _read_json_body(self):
-        length = int(self.headers.get("Content-Length", 0))
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            self._send_json_error(400, "invalid content length")
+            return None
+
         if length == 0:
             return {}
 
@@ -148,16 +167,17 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             return False
         return True
 
-    def _send_json(self, status, payload):
+    def _send_json(self, status, payload, include_body=True):
         content = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
-        self.wfile.write(content)
+        if include_body:
+            self.wfile.write(content)
 
-    def _send_json_error(self, status, message):
-        self._send_json(status, {"error": message})
+    def _send_json_error(self, status, message, include_body=True):
+        self._send_json(status, {"error": message}, include_body=include_body)
 
     def log_message(self, format, *args):
         return
