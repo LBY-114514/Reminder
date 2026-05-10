@@ -1,9 +1,12 @@
 import json
 import mimetypes
 import threading
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+
+from challenge_reminder.reminders import due_issues
 
 
 class ChallengeReminderHandler(BaseHTTPRequestHandler):
@@ -15,6 +18,15 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
         if self.path_info == "/api/issues":
             with self.store_lock:
                 issues = self.store.list_issues()
+            self._send_json(200, issues)
+            return
+
+        if self.path_info == "/api/reminders/due":
+            now = datetime.now().astimezone()
+            with self.store_lock:
+                issues = due_issues(self.store.list_issues(), now)
+                for issue in issues:
+                    self.store.mark_notified(issue["id"])
             self._send_json(200, issues)
             return
 

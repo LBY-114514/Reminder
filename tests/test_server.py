@@ -6,6 +6,7 @@ import threading
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from challenge_reminder.server import create_server
@@ -20,6 +21,7 @@ class FakeStore:
                 "detail": "整理申报材料",
                 "remind_at": "2026-05-10T18:30:00+08:00",
                 "status": "pending",
+                "notified": False,
             }
         ]
 
@@ -35,6 +37,7 @@ class FakeStore:
             "detail": detail,
             "remind_at": remind_at,
             "status": "pending",
+            "notified": False,
         }
         self.issues.append(issue)
         return issue
@@ -51,6 +54,11 @@ class FakeStore:
     def mark_done(self, issue_id):
         issue = self.find_issue(issue_id)
         issue["status"] = "done"
+        return issue
+
+    def mark_notified(self, issue_id):
+        issue = self.find_issue(issue_id)
+        issue["notified"] = True
         return issue
 
     def find_issue(self, issue_id):
@@ -73,6 +81,7 @@ class RaceyStore(FakeStore):
             "detail": detail,
             "remind_at": remind_at,
             "status": "pending",
+            "notified": False,
         }
         issues.append(issue)
         self.issues = issues
@@ -181,6 +190,54 @@ class ServerTest(unittest.TestCase):
 
         payload = self.assert_json_response(response, data, 200)
         self.assertEqual("done", payload["status"])
+
+    def test_get_due_reminders_returns_due_once_and_filters_others(self):
+        now = datetime.now().astimezone()
+        self.server.RequestHandlerClass.store.issues = [
+            {
+                "id": "due",
+                "title": "到点提醒",
+                "detail": "",
+                "remind_at": (now - timedelta(minutes=1)).isoformat(),
+                "status": "pending",
+                "notified": False,
+            },
+            {
+                "id": "future",
+                "title": "未来提醒",
+                "detail": "",
+                "remind_at": (now + timedelta(minutes=1)).isoformat(),
+                "status": "pending",
+                "notified": False,
+            },
+            {
+                "id": "done",
+                "title": "已完成",
+                "detail": "",
+                "remind_at": (now - timedelta(minutes=1)).isoformat(),
+                "status": "done",
+                "notified": False,
+            },
+            {
+                "id": "notified",
+                "title": "已通知",
+                "detail": "",
+                "remind_at": (now - timedelta(minutes=1)).isoformat(),
+                "status": "pending",
+                "notified": True,
+            },
+        ]
+
+        response, data = self.request("GET", "/api/reminders/due")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual(["due"], [issue["id"] for issue in payload])
+        self.assertTrue(self.server.RequestHandlerClass.store.find_issue("due")["notified"])
+
+        response, data = self.request("GET", "/api/reminders/due")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual([], payload)
 
     def raw_request(self, request):
         with socket.create_connection((self.host, self.port), timeout=5) as client:
