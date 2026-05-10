@@ -17,6 +17,8 @@ const elements = {
   appAlert: document.querySelector("#appAlert"),
   dataLocation: document.querySelector("#dataLocation"),
   changeDataLocation: document.querySelector("#changeDataLocation"),
+  manualDataFolder: document.querySelector("#manualDataFolder"),
+  saveManualDataFolder: document.querySelector("#saveManualDataFolder"),
   issueList: document.querySelector("#issueList"),
   filterButtons: document.querySelectorAll(".filter-button"),
 };
@@ -126,6 +128,9 @@ function renderLoadFailure() {
 
 function renderDataLocation(info) {
   elements.dataLocation.textContent = info?.path || "暂未获取到数据位置。";
+  if (info?.folder) {
+    elements.manualDataFolder.value = info.folder;
+  }
 }
 
 async function loadDataLocation() {
@@ -357,10 +362,39 @@ async function handleChangeDataLocation() {
   }
 }
 
+async function handleSaveManualDataFolder() {
+  const folder = elements.manualDataFolder.value.trim();
+  if (!folder) {
+    setAlert("请先粘贴或输入一个文件夹路径。", "error");
+    elements.manualDataFolder.focus();
+    return;
+  }
+
+  elements.saveManualDataFolder.disabled = true;
+  try {
+    const info = await apiRequest("/api/data-location", {
+      method: "POST",
+      body: JSON.stringify({ folder }),
+    });
+    renderDataLocation(info);
+    await loadIssues();
+    if (info.migrated) {
+      setAlert("数据位置已更改，旧数据已迁移到新文件夹。");
+    } else {
+      setAlert("数据位置已更改。");
+    }
+  } catch (error) {
+    setAlert(`保存数据位置失败：${error.message}`, "error");
+  } finally {
+    elements.saveManualDataFolder.disabled = false;
+  }
+}
+
 elements.form.addEventListener("submit", handleSubmit);
 elements.cancelEdit.addEventListener("click", resetForm);
 elements.issueList.addEventListener("click", handleListClick);
 elements.changeDataLocation.addEventListener("click", handleChangeDataLocation);
+elements.saveManualDataFolder.addEventListener("click", handleSaveManualDataFolder);
 document.querySelector(".filters").addEventListener("click", handleFilterClick);
 
 Promise.all([loadIssues(), loadDataLocation()]).then(pollDueReminders);

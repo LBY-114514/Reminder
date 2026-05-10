@@ -19,4 +19,8 @@ pyinstaller `
   --hidden-import "tkinter.filedialog" `
   app.py
 
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
+
 Write-Host "Build complete: dist\挑战杯提醒.exe"

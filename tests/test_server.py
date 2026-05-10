@@ -87,6 +87,16 @@ class FakeStore:
             "migrated": True,
         }
 
+    def set_data_folder(self, folder):
+        return {
+            "path": f"{folder}\\issues.json",
+            "folder": folder,
+            "configured": True,
+            "config_path": "C:\\Config\\config.json",
+            "cancelled": False,
+            "migrated": True,
+        }
+
 
 class RaceyStore(FakeStore):
     def __init__(self):
@@ -280,6 +290,29 @@ class ServerTest(unittest.TestCase):
         self.assertEqual("D:\\Chosen\\issues.json", payload["path"])
         self.assertTrue(payload["configured"])
         self.assertTrue(self.server.RequestHandlerClass.store.data_location_selected)
+
+    def test_post_data_location_sets_manual_folder_path(self):
+        response, data = self.request(
+            "POST",
+            "/api/data-location",
+            body=json.dumps({"folder": "E:\\ReminderData"}),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual("E:\\ReminderData", payload["folder"])
+        self.assertEqual("E:\\ReminderData\\issues.json", payload["path"])
+
+    def test_post_data_location_rejects_empty_folder_path(self):
+        response, data = self.request(
+            "POST",
+            "/api/data-location",
+            body=json.dumps({"folder": "  "}),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 400)
+        self.assertEqual({"error": "folder is required"}, payload)
 
     def raw_request(self, request):
         with socket.create_connection((self.host, self.port), timeout=5) as client:

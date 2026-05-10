@@ -1,178 +1,127 @@
 # 挑战杯提醒
 
-一个本地运行的挑战杯事项提醒工具。启动后会打开浏览器页面，可添加、编辑、完成和删除提醒事项，并在提醒时间到达后触发本机通知。
+这是一个电脑本地使用的小工具，用来记录挑战杯相关的问题、任务和提醒时间。
 
-## 环境要求
+打开后会自动进入一个网页界面，你可以在里面添加事项、修改事项、标记完成、删除事项，并设置提醒时间。到时间后，电脑会弹出提醒。
 
-本项目只使用 Python 标准库，**不需要额外安装第三方 Python 包**。
+## 适合谁用
 
-你需要准备：
+- 想记录挑战杯准备过程中遇到的问题
+- 想给自己设置复盘、修改、提交材料等提醒
+- 想要一个简单、本地、不用注册账号的提醒工具
 
-- Python 3.10 或更高版本
-- Conda / Miniconda / Miniforge（可选，但推荐）
+## 怎么使用
 
-说明：`forskills` 只是作者电脑上的 Conda 环境名称，不是本项目必须安装的东西。别人使用时可以任选一种方式：
+### 1. 下载 exe 文件
 
-### 方式一：创建同名环境
-
-```bat
-conda create -n forskills python=3.11
-conda activate forskills
-```
-
-这样可以直接使用项目里的 `start.bat`。
-
-### 方式二：使用自己的环境名
-
-例如你想用 `reminder` 作为环境名：
-
-```bat
-conda create -n reminder python=3.11
-conda activate reminder
-```
-
-然后把 `start.bat` 里的：
-
-```bat
-call conda activate forskills
-```
-
-改成：
-
-```bat
-call conda activate reminder
-```
-
-### 方式三：不用 Conda
-
-如果电脑已经有可用的 Python，可以直接运行：
-
-```bat
-python app.py
-```
-
-这种情况下也可以把 `start.bat` 里的 Conda 检查和激活部分删掉，只保留：
-
-```bat
-@echo off
-cd /d "%~dp0"
-python app.py
-pause
-```
-
-## 使用方法
-
-### 双击启动
-
-1. 确认已安装 Python，并准备好一个可用环境。
-2. 如使用 `start.bat`，确认里面的 Conda 环境名与你电脑一致。
-3. 双击 `start.bat`。
-4. 浏览器会自动打开本地页面，默认地址从 `http://localhost:8787` 开始，如端口占用会自动尝试后续端口。
-
-可以为 `start.bat` 创建桌面快捷方式，方便日常使用：右键 `start.bat` -> 发送到 -> 桌面快捷方式；也可以复制该快捷方式到桌面。
-
-如果双击后提示 `conda` 不可用，请从 Anaconda Prompt 或 Miniforge Prompt 进入项目目录后运行启动命令，或先将 Conda 初始化到当前命令行。如果你没有使用 `forskills` 这个环境名，请同步修改 `start.bat`。
-
-### 命令行启动
-
-```bat
-conda activate forskills
-python app.py
-```
-
-如果你的环境名不是 `forskills`，把第一行换成自己的环境名；如果不用 Conda，可以只运行：
-
-```bat
-python app.py
-```
-
-## 数据位置
-
-提醒事项保存在：
+下载这个文件：
 
 ```text
-data/issues.json
+挑战杯提醒.exe
 ```
 
-该文件包含本地个人数据，已在 `.gitignore` 中忽略，不会上传到 GitHub。`data/.gitkeep` 仅用于保留空目录。
+### 2. 双击运行
 
-页面里会显示当前 JSON 保存路径。点击 **更改保存位置** 后，可以选择一个文件夹；程序会把 `issues.json` 保存到该文件夹中，并记住这个选择。选择新位置时，如果新文件夹里还没有 `issues.json`，程序会自动把旧数据迁移过去。
+双击 `挑战杯提醒.exe`。
 
-如果数据文件损坏，程序会备份为类似 `data/issues.json.corrupt-YYYYMMDDHHMMSS` 的文件，并重新创建空数据文件；这些备份文件也不会上传。
-
-## 测试命令
-
-运行测试前先激活虚拟环境：
-
-```bat
-conda activate forskills
-python -m unittest discover -s tests -v
-```
-
-如果你的环境名不是 `forskills`，把第一行换成自己的环境名即可；如果不用 Conda，直接运行第二行。
-
-## 打包成单文件 exe
-
-如果想让别人下载一个 exe 就能使用，可以用 PyInstaller 打包。
-
-### 安装打包工具
-
-```bat
-pip install pyinstaller
-```
-
-### 执行打包
-
-双击：
+程序启动后会自动打开浏览器页面。如果没有自动打开，可以看程序窗口里显示的本地地址，一般类似：
 
 ```text
-build_exe.bat
+http://localhost:8787
 ```
 
-或在命令行运行：
+把这个地址复制到浏览器里打开即可。
 
-```bat
-build_exe.bat
-```
+### 3. 添加提醒
 
-打包成功后会生成：
+在页面里填写：
+
+- 标题
+- 内容
+- 提醒时间
+
+然后点击添加按钮即可。
+
+提醒时间到了之后，电脑会弹出通知提醒你查看。
+
+## 设置数据保存位置
+
+程序会把你记录的内容保存成一个 JSON 文件。
+
+如果你想自己指定保存位置，可以在页面里的路径输入框中粘贴文件夹地址，例如：
 
 ```text
-dist/挑战杯提醒.exe
+D:\ReminderData
 ```
 
-把这个 exe 发给别人即可。对方不需要安装 Python 或 Conda。
-
-### exe 版数据位置
-
-源码运行时，数据保存在项目里的：
+然后点击：
 
 ```text
-data/issues.json
+保存到这个文件夹
 ```
 
-单文件 exe 运行时，数据会保存在当前 Windows 用户目录下：
+程序会自动在这个文件夹里保存数据文件。
+
+### 注意：路径不要带引号
+
+从 Windows 地址栏复制路径时，有些情况下可能会带上引号，例如：
 
 ```text
-%LOCALAPPDATA%/ChallengeCupReminder/data/issues.json
+"D:\ReminderData"
 ```
 
-这样可以避免 exe 每次启动时因为临时解压目录变化导致数据丢失。
-
-如果用户在页面里更改了 JSON 保存位置，exe 会把配置记在：
+这种情况需要把前后的引号删掉，改成：
 
 ```text
-%LOCALAPPDATA%/ChallengeCupReminder/config.json
+D:\ReminderData
 ```
 
-以后启动会继续使用用户选择的保存路径。
+否则程序可能无法正确识别路径。
 
-## GitHub 上传提示
+## 数据会保存在哪里
 
-提交代码时可以上传启动脚本、README、测试和应用代码，但不要上传本地数据文件：
+如果你没有手动设置保存位置，程序会使用默认位置保存数据。
+
+如果你手动设置了保存文件夹，数据会保存在你选择的文件夹里。
+
+以后再次打开程序，会继续使用上一次设置的保存位置。
+
+## 常见问题
+
+### 运行后没有自动打开网页怎么办？
+
+看一下程序窗口里显示的地址，把类似下面的地址复制到浏览器打开：
 
 ```text
-data/issues.json
+http://localhost:8787
 ```
 
-`.gitignore` 已配置忽略该文件、临时文件和损坏备份文件。
+### 关闭程序后还能提醒吗？
+
+不能。提醒功能需要程序正在运行。
+
+如果你希望它提醒你，记得保持 `挑战杯提醒.exe` 不要关闭。
+
+### 怎么完全退出程序？
+
+只关闭浏览器页面不一定会结束程序。
+
+如果想完全退出，请回到运行 `挑战杯提醒.exe` 的终端窗口，按：
+
+```text
+Ctrl + C
+```
+
+这样才能结束程序进程。
+
+### 需要安装 Python 或 Conda 吗？
+
+不需要。
+
+如果你下载的是 `挑战杯提醒.exe`，直接双击运行即可。
+
+### 数据会上传到网上吗？
+
+不会。
+
+这是本地工具，数据保存在你自己的电脑里。

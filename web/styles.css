@@ -154,6 +154,14 @@ h2 {
   align-items: center;
 }
 
+.manual-location-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
 .data-location {
   overflow-wrap: anywhere;
   font-family: "Cascadia Mono", "Consolas", monospace;
@@ -349,6 +357,7 @@ textarea {
   .hero,
   .notice-grid,
   .data-location-row,
+  .manual-location-row,
   .issue-form,
   .list-header,
   .issue-top {
