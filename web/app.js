@@ -113,7 +113,12 @@ function setAlert(message, type = "info") {
   if (type === "due") {
     elements.appAlert.classList.add("has-due");
   }
-  elements.appAlert.innerHTML = message;
+  elements.appAlert.textContent = message;
+}
+
+function renderLoadFailure() {
+  elements.nextReminder.textContent = "加载失败";
+  elements.issueList.innerHTML = '<div class="empty-state">加载失败，请确认程序是否正常运行。</div>';
 }
 
 function renderNextReminder() {
@@ -189,7 +194,8 @@ async function loadIssues() {
     state.issues = await apiRequest("/api/issues");
     render();
   } catch (error) {
-    setAlert(`加载问题失败：${escapeHtml(error.message)}`, "error");
+    renderLoadFailure();
+    setAlert(`加载问题失败：${error.message}`, "error");
   }
 }
 
@@ -223,7 +229,7 @@ async function handleSubmit(event) {
     await loadIssues();
     setAlert("提醒已保存。");
   } catch (error) {
-    setAlert(`保存失败：${escapeHtml(error.message)}`, "error");
+    setAlert(`保存失败：${error.message}`, "error");
   }
 }
 
@@ -263,17 +269,23 @@ async function handleListClick(event) {
   try {
     if (action === "done") {
       await apiRequest(`/api/issues/${encodeURIComponent(id)}/done`, { method: "POST" });
+      if (state.editingId === id) {
+        resetForm();
+      }
       setAlert("已标记为处理完成。");
     }
 
     if (action === "delete") {
       await apiRequest(`/api/issues/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (state.editingId === id) {
+        resetForm();
+      }
       setAlert("提醒已删除。");
     }
 
     await loadIssues();
   } catch (error) {
-    setAlert(`操作失败：${escapeHtml(error.message)}`, "error");
+    setAlert(`操作失败：${error.message}`, "error");
   }
 }
 
@@ -295,15 +307,13 @@ async function pollDueReminders() {
     const dueIssues = await apiRequest("/api/reminders/due");
     if (dueIssues.length > 0) {
       setAlert(
-        `有 ${dueIssues.length} 条提醒已到期：${dueIssues
-          .map((issue) => `<strong>${escapeHtml(issue.title)}</strong>`)
-          .join("、")}`,
+        `有 ${dueIssues.length} 条提醒已到期：${dueIssues.map((issue) => issue.title).join("、")}`,
         "due",
       );
       await loadIssues();
     }
   } catch (error) {
-    setAlert(`检查到期提醒失败：${escapeHtml(error.message)}`, "error");
+    setAlert(`检查到期提醒失败：${error.message}`, "error");
   }
 }
 
