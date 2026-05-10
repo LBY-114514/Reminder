@@ -66,6 +66,19 @@ class ReminderLoopTests(unittest.TestCase):
 
 
 class NotificationTests(unittest.TestCase):
+    def test_powershell_fast_success_returns_false(self):
+        class ExitedProcess:
+            returncode = 0
+
+            def wait(self, timeout):
+                return self.returncode
+
+        with patch("challenge_reminder.notifications.sys.platform", "win32"), patch(
+            "challenge_reminder.notifications.subprocess.Popen",
+            return_value=ExitedProcess(),
+        ):
+            self.assertFalse(notify_issue(due_issue("fast-exit")))
+
     def test_powershell_fast_failure_returns_false(self):
         class FailedProcess:
             returncode = 1

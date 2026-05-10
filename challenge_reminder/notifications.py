@@ -51,11 +51,8 @@ def notify_issue(issue):
         return False
 
     try:
-        return_code = process.wait(timeout=STARTUP_TIMEOUT_SECONDS)
+        process.wait(timeout=STARTUP_TIMEOUT_SECONDS)
     except subprocess.TimeoutExpired:
         return True
 
-    if return_code != 0:
-        return False
-
-    return True
+    return False
