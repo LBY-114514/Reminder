@@ -1,5 +1,6 @@
 import json
 import mimetypes
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -7,11 +8,14 @@ from urllib.parse import unquote, urlparse
 
 class ChallengeReminderHandler(BaseHTTPRequestHandler):
     store = None
+    store_lock = None
     web_dir = None
 
     def do_GET(self):
         if self.path_info == "/api/issues":
-            self._send_json(200, self.store.list_issues())
+            with self.store_lock:
+                issues = self.store.list_issues()
+            self._send_json(200, issues)
             return
 
         if self._is_api_path():
@@ -27,11 +31,12 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
                 return
 
             try:
-                issue = self.store.add_issue(
-                    payload.get("title"),
-                    payload.get("detail"),
-                    payload.get("remind_at"),
-                )
+                with self.store_lock:
+                    issue = self.store.add_issue(
+                        payload.get("title"),
+                        payload.get("detail"),
+                        payload.get("remind_at"),
+                    )
             except ValueError as exc:
                 self._send_json_error(400, str(exc))
                 return
@@ -42,7 +47,8 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
         issue_id, action = self._issue_route()
         if issue_id and action == "done":
             try:
-                issue = self.store.mark_done(issue_id)
+                with self.store_lock:
+                    issue = self.store.mark_done(issue_id)
             except KeyError:
                 self._send_json_error(404, "not found")
                 return
@@ -63,7 +69,8 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            issue = self.store.update_issue(issue_id, payload)
+            with self.store_lock:
+                issue = self.store.update_issue(issue_id, payload)
         except ValueError as exc:
             self._send_json_error(400, str(exc))
             return
@@ -80,7 +87,8 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            self.store.delete_issue(issue_id)
+            with self.store_lock:
+                self.store.delete_issue(issue_id)
         except KeyError:
             self._send_json_error(404, "not found")
             return
@@ -201,5 +209,6 @@ def create_server(host, port, store, web_dir):
         pass
 
     Handler.store = store
+    Handler.store_lock = threading.RLock()
     Handler.web_dir = Path(web_dir)
     return ThreadingHTTPServer((host, port), Handler)

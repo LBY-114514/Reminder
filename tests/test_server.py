@@ -3,7 +3,9 @@ import json
 import socket
 import tempfile
 import threading
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from challenge_reminder.server import create_server
@@ -27,25 +29,54 @@ class FakeStore:
     def add_issue(self, title, detail, remind_at):
         if not title:
             raise ValueError("title must not be empty")
-        issue = {"id": "issue-2", "title": title, "detail": detail, "remind_at": remind_at}
+        issue = {
+            "id": f"issue-{len(self.issues) + 1}",
+            "title": title,
+            "detail": detail,
+            "remind_at": remind_at,
+            "status": "pending",
+        }
         self.issues.append(issue)
         return issue
 
     def update_issue(self, issue_id, payload):
-        if issue_id != "issue-1":
-            raise KeyError(issue_id)
-        issue = dict(self.issues[0])
+        issue = self.find_issue(issue_id)
         issue.update(payload)
         return issue
 
     def delete_issue(self, issue_id):
-        if issue_id != "issue-1":
-            raise KeyError(issue_id)
+        self.find_issue(issue_id)
+        self.issues = [issue for issue in self.issues if issue["id"] != issue_id]
 
     def mark_done(self, issue_id):
-        if issue_id != "issue-1":
-            raise KeyError(issue_id)
-        return {**self.issues[0], "status": "done"}
+        issue = self.find_issue(issue_id)
+        issue["status"] = "done"
+        return issue
+
+    def find_issue(self, issue_id):
+        for issue in self.issues:
+            if issue["id"] == issue_id:
+                return issue
+        raise KeyError(issue_id)
+
+
+class RaceyStore(FakeStore):
+    def __init__(self):
+        self.issues = []
+
+    def add_issue(self, title, detail, remind_at):
+        issues = list(self.issues)
+        time.sleep(0.02)
+        issue = {
+            "id": title,
+            "title": title,
+            "detail": detail,
+            "remind_at": remind_at,
+            "status": "pending",
+        }
+        issues.append(issue)
+        self.issues = issues
+        return issue
 
 
 class ServerTest(unittest.TestCase):
@@ -105,6 +136,51 @@ class ServerTest(unittest.TestCase):
 
         payload = self.assert_json_response(response, data, 400)
         self.assertEqual({"error": "invalid json"}, payload)
+
+    def test_post_api_issues_creates_issue(self):
+        response, data = self.request(
+            "POST",
+            "/api/issues",
+            body=json.dumps(
+                {
+                    "title": "提交申报书",
+                    "detail": "上传附件",
+                    "remind_at": "2026-05-10T18:30:00+08:00",
+                }
+            ),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 201)
+        self.assertEqual("提交申报书", payload["title"])
+        self.assertEqual("pending", payload["status"])
+
+    def test_put_api_issue_updates_issue(self):
+        response, data = self.request(
+            "PUT",
+            "/api/issues/issue-1",
+            body=json.dumps({"title": "更新标题"}),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual("更新标题", payload["title"])
+
+    def test_delete_api_issue_removes_issue(self):
+        response, data = self.request("DELETE", "/api/issues/issue-1")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual({"ok": True}, payload)
+
+        response, data = self.request("GET", "/api/issues")
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual([], payload)
+
+    def test_post_api_issue_done_marks_done(self):
+        response, data = self.request("POST", "/api/issues/issue-1/done")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual("done", payload["status"])
 
     def raw_request(self, request):
         with socket.create_connection((self.host, self.port), timeout=5) as client:
@@ -175,6 +251,39 @@ class ServerTest(unittest.TestCase):
 
         self.assertEqual(404, response.status)
         self.assertNotEqual(b"secret", data)
+
+    def test_static_file_is_served(self):
+        response, data = self.request("GET", "/app.js")
+
+        self.assertEqual(200, response.status)
+        self.assertEqual("application/javascript", response.getheader("Content-Type"))
+        self.assertEqual(b"console.log('ok');", data)
+
+    def test_concurrent_posts_are_serialized_without_lost_records(self):
+        self.server.RequestHandlerClass.store = RaceyStore()
+
+        def post_issue(index):
+            response, data = self.request(
+                "POST",
+                "/api/issues",
+                body=json.dumps(
+                    {
+                        "title": f"issue-{index}",
+                        "detail": "",
+                        "remind_at": "2026-05-10T18:30:00+08:00",
+                    }
+                ),
+                headers={"Content-Type": "application/json"},
+            )
+            return response.status, data
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            results = list(executor.map(post_issue, range(20)))
+
+        self.assertTrue(all(status == 201 for status, _data in results))
+        response, data = self.request("GET", "/api/issues")
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual(20, len(payload))
 
 
 if __name__ == "__main__":
