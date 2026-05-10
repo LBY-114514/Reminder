@@ -5,6 +5,7 @@ __pycache__/
 
 data/issues.json
 data/issues.json.corrupt-*
+data/.issues.json.*.tmp
 
 .superpowers/brainstorm/
 .worktrees/
