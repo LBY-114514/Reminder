@@ -106,33 +106,52 @@ class ServerTest(unittest.TestCase):
         payload = self.assert_json_response(response, data, 400)
         self.assertEqual({"error": "invalid json"}, payload)
 
-    def test_non_integer_content_length_returns_json_400(self):
+    def raw_request(self, request):
         with socket.create_connection((self.host, self.port), timeout=5) as client:
-            client.sendall(
-                b"POST /api/issues HTTP/1.1\r\n"
-                b"Host: localhost\r\n"
-                b"Content-Type: application/json\r\n"
-                b"Content-Length: nope\r\n"
-                b"\r\n"
-                b"{}"
-            )
+            client.sendall(request)
             chunks = []
             while True:
                 chunk = client.recv(4096)
                 if not chunk:
                     break
                 chunks.append(chunk)
-            raw_response = b"".join(chunks)
+            return b"".join(chunks)
+
+    def test_non_integer_content_length_returns_json_400(self):
+        raw_response = self.raw_request(
+            b"POST /api/issues HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
+            b"Content-Type: application/json\r\n"
+            b"Content-Length: nope\r\n"
+            b"\r\n"
+            b"{}"
+        )
+
+        self.assertIn(b"HTTP/1.0 400", raw_response)
+        self.assertIn(b"Content-Type: application/json; charset=utf-8", raw_response)
+        self.assertIn(b'{"error": "invalid content length"}', raw_response)
+
+    def test_negative_content_length_returns_json_400(self):
+        raw_response = self.raw_request(
+            b"POST /api/issues HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
+            b"Content-Type: application/json\r\n"
+            b"Content-Length: -1\r\n"
+            b"\r\n"
+            b"{}"
+        )
 
         self.assertIn(b"HTTP/1.0 400", raw_response)
         self.assertIn(b"Content-Type: application/json; charset=utf-8", raw_response)
         self.assertIn(b'{"error": "invalid content length"}', raw_response)
 
     def test_unsupported_api_methods_return_json_error(self):
-        response, data = self.request("PATCH", "/api/issues")
+        for method in ["PATCH", "OPTIONS"]:
+            with self.subTest(method=method):
+                response, data = self.request(method, "/api/issues")
 
-        payload = self.assert_json_response(response, data, 405)
-        self.assertEqual({"error": "method not allowed"}, payload)
+                payload = self.assert_json_response(response, data, 405)
+                self.assertEqual({"error": "method not allowed"}, payload)
 
         response, data = self.request("HEAD", "/api/issues")
 

@@ -123,6 +123,10 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             self._send_json_error(400, "invalid content length")
             return None
 
+        if length < 0:
+            self._send_json_error(400, "invalid content length")
+            return None
+
         if length == 0:
             return {}
 
@@ -178,6 +182,15 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
 
     def _send_json_error(self, status, message, include_body=True):
         self._send_json(status, {"error": message}, include_body=include_body)
+
+    def send_error(self, code, message=None, explain=None):
+        if self._is_api_path():
+            status = 405 if code == 501 else code
+            error = "method not allowed" if status == 405 else message or "not found"
+            self._send_json_error(status, error, include_body=self.command != "HEAD")
+            return
+
+        super().send_error(code, message=message, explain=explain)
 
     def log_message(self, format, *args):
         return
