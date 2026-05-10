@@ -191,7 +191,7 @@ class ServerTest(unittest.TestCase):
         payload = self.assert_json_response(response, data, 200)
         self.assertEqual("done", payload["status"])
 
-    def test_get_due_reminders_returns_due_once_and_filters_others(self):
+    def test_get_due_reminders_does_not_mark_notified_until_native_notification(self):
         now = datetime.now().astimezone()
         self.server.RequestHandlerClass.store.issues = [
             {
@@ -232,7 +232,14 @@ class ServerTest(unittest.TestCase):
 
         payload = self.assert_json_response(response, data, 200)
         self.assertEqual(["due"], [issue["id"] for issue in payload])
-        self.assertTrue(self.server.RequestHandlerClass.store.find_issue("due")["notified"])
+        self.assertFalse(self.server.RequestHandlerClass.store.find_issue("due")["notified"])
+
+        response, data = self.request("GET", "/api/reminders/due")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual(["due"], [issue["id"] for issue in payload])
+
+        self.server.RequestHandlerClass.store.mark_notified("due")
 
         response, data = self.request("GET", "/api/reminders/due")
 

@@ -2,6 +2,7 @@ const state = {
   issues: [],
   filter: "all",
   editingId: null,
+  displayedDueIssueIds: new Set(),
 };
 
 const elements = {
@@ -305,9 +306,11 @@ function handleFilterClick(event) {
 async function pollDueReminders() {
   try {
     const dueIssues = await apiRequest("/api/reminders/due");
-    if (dueIssues.length > 0) {
+    const newDueIssues = dueIssues.filter((issue) => !state.displayedDueIssueIds.has(issue.id));
+    newDueIssues.forEach((issue) => state.displayedDueIssueIds.add(issue.id));
+    if (newDueIssues.length > 0) {
       setAlert(
-        `有 ${dueIssues.length} 条提醒已到期：${dueIssues.map((issue) => issue.title).join("、")}`,
+        `有 ${newDueIssues.length} 条提醒已到期：${newDueIssues.map((issue) => issue.title).join("、")}`,
         "due",
       );
       await loadIssues();

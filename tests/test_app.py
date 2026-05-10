@@ -1,7 +1,10 @@
+import subprocess
 import threading
 import unittest
+from unittest.mock import patch
 
 from app import reminder_loop
+from challenge_reminder.notifications import notify_issue
 
 
 class FakeStore:
@@ -60,6 +63,32 @@ class ReminderLoopTests(unittest.TestCase):
         reminder_loop(store, notify=notify, run_once=True, store_lock=lock, on_error=ignore_error)
 
         self.assertEqual([False], lock_states)
+
+
+class NotificationTests(unittest.TestCase):
+    def test_powershell_fast_failure_returns_false(self):
+        class FailedProcess:
+            returncode = 1
+
+            def wait(self, timeout):
+                return self.returncode
+
+        with patch("challenge_reminder.notifications.sys.platform", "win32"), patch(
+            "challenge_reminder.notifications.subprocess.Popen",
+            return_value=FailedProcess(),
+        ):
+            self.assertFalse(notify_issue(due_issue("failed-launch")))
+
+    def test_powershell_still_running_returns_true(self):
+        class RunningProcess:
+            def wait(self, timeout):
+                raise subprocess.TimeoutExpired("powershell.exe", timeout)
+
+        with patch("challenge_reminder.notifications.sys.platform", "win32"), patch(
+            "challenge_reminder.notifications.subprocess.Popen",
+            return_value=RunningProcess(),
+        ):
+            self.assertTrue(notify_issue(due_issue("running")))
 
 
 def due_issue(issue_id):

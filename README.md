@@ -13,6 +13,8 @@
 
 可以为 `start.bat` 创建桌面快捷方式，方便日常使用：右键 `start.bat` -> 发送到 -> 桌面快捷方式；也可以复制该快捷方式到桌面。
 
+如果双击后提示 `conda` 不可用，请从 Anaconda Prompt 或 Miniforge Prompt 进入项目目录后运行启动命令，或先将 Conda 初始化到当前命令行。无论哪种方式，都需要提前创建好 `forskills` 环境。
+
 ### 命令行启动
 
 ```bat

@@ -25,8 +25,6 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             now = datetime.now().astimezone()
             with self.store_lock:
                 issues = due_issues(self.store.list_issues(), now)
-                for issue in issues:
-                    self.store.mark_notified(issue["id"])
             self._send_json(200, issues)
             return
 

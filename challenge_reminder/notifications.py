@@ -5,6 +5,7 @@ import sys
 
 DEFAULT_MESSAGE = "记得查看这条记录。"
 MAX_MESSAGE_LENGTH = 500
+STARTUP_TIMEOUT_SECONDS = 0.3
 
 
 def notify_issue(issue):
@@ -31,7 +32,7 @@ def notify_issue(issue):
 
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
-        subprocess.Popen(
+        process = subprocess.Popen(
             [
                 "powershell.exe",
                 "-NoProfile",
@@ -47,6 +48,14 @@ def notify_issue(issue):
             creationflags=creationflags,
         )
     except OSError:
+        return False
+
+    try:
+        return_code = process.wait(timeout=STARTUP_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        return True
+
+    if return_code != 0:
         return False
 
     return True
