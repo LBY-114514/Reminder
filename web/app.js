@@ -22,6 +22,9 @@ const elements = {
   startupStatus: document.querySelector("#startupStatus"),
   enableStartup: document.querySelector("#enableStartup"),
   disableStartup: document.querySelector("#disableStartup"),
+  soundStatus: document.querySelector("#soundStatus"),
+  soundEnabled: document.querySelector("#soundEnabled"),
+  soundFile: document.querySelector("#soundFile"),
   issueList: document.querySelector("#issueList"),
   toastStack: document.querySelector("#toastStack"),
   filterButtons: document.querySelectorAll(".filter-button"),
@@ -199,6 +202,26 @@ async function loadStartup() {
     elements.enableStartup.disabled = true;
     elements.disableStartup.disabled = true;
     setAlert(`加载开机启动状态失败：${error.message}`, "error");
+  }
+}
+
+function renderSound(info) {
+  const hasFile = Boolean(info?.exists);
+  elements.soundEnabled.checked = Boolean(info?.enabled && hasFile);
+  elements.soundEnabled.disabled = !hasFile;
+  elements.soundStatus.textContent = hasFile
+    ? `当前音效：${info.file_name}（${info.enabled ? "已开启" : "已关闭"}）`
+    : "还没有选择音效文件。请选择一个 mp3。";
+}
+
+async function loadSound() {
+  try {
+    const info = await apiRequest("/api/sound");
+    renderSound(info);
+  } catch (error) {
+    elements.soundStatus.textContent = "音效设置加载失败。";
+    elements.soundEnabled.disabled = true;
+    setAlert(`加载音效设置失败：${error.message}`, "error");
   }
 }
 
@@ -503,6 +526,64 @@ async function setStartupEnabled(enabled) {
   }
 }
 
+async function setSoundEnabled(enabled) {
+  elements.soundEnabled.disabled = true;
+  try {
+    const info = await apiRequest("/api/sound/enabled", {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    });
+    renderSound(info);
+    setAlert(enabled ? "已开启提醒音效。" : "已关闭提醒音效。");
+  } catch (error) {
+    setAlert(`设置音效失败：${error.message}`, "error");
+    await loadSound();
+  }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(reader.error || new Error("读取文件失败")));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleSoundFileChange() {
+  const [file] = elements.soundFile.files;
+  if (!file) {
+    return;
+  }
+
+  if (!file.name.toLowerCase().endsWith(".mp3")) {
+    setAlert("请选择 mp3 文件。", "error");
+    elements.soundFile.value = "";
+    return;
+  }
+
+  elements.soundFile.disabled = true;
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    const contentBase64 = String(dataUrl).split(",", 2)[1] || "";
+    const info = await apiRequest("/api/sound/file", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: file.name,
+        content_base64: contentBase64,
+      }),
+    });
+    renderSound(info);
+    setAlert("音效文件已复制到数据文件夹，并已开启音效。");
+  } catch (error) {
+    setAlert(`保存音效失败：${error.message}`, "error");
+    await loadSound();
+  } finally {
+    elements.soundFile.disabled = false;
+    elements.soundFile.value = "";
+  }
+}
+
 elements.form.addEventListener("submit", handleSubmit);
 elements.cancelEdit.addEventListener("click", resetForm);
 elements.issueList.addEventListener("click", handleListClick);
@@ -510,8 +591,10 @@ elements.changeDataLocation.addEventListener("click", handleChangeDataLocation);
 elements.saveManualDataFolder.addEventListener("click", handleSaveManualDataFolder);
 elements.enableStartup.addEventListener("click", () => setStartupEnabled(true));
 elements.disableStartup.addEventListener("click", () => setStartupEnabled(false));
+elements.soundEnabled.addEventListener("change", () => setSoundEnabled(elements.soundEnabled.checked));
+elements.soundFile.addEventListener("change", handleSoundFileChange);
 elements.toastStack.addEventListener("click", handleToastClick);
 document.querySelector(".filters").addEventListener("click", handleFilterClick);
 
-Promise.all([loadIssues(), loadDataLocation(), loadStartup()]).then(pollDueReminders);
+Promise.all([loadIssues(), loadDataLocation(), loadStartup(), loadSound()]).then(pollDueReminders);
 window.setInterval(pollDueReminders, 5000);

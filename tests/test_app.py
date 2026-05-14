@@ -14,6 +14,7 @@ class FakeStore:
     def __init__(self, issues):
         self.issues = issues
         self.notified_ids = []
+        self.sound_path = None
 
     def list_issues(self):
         return [issue.copy() for issue in self.issues]
@@ -25,6 +26,9 @@ class FakeStore:
                 issue["notified"] = True
                 return issue
         raise KeyError(issue_id)
+
+    def notification_sound_path(self):
+        return self.sound_path
 
 
 class ReminderLoopTests(unittest.TestCase):
@@ -71,6 +75,19 @@ class ReminderLoopTests(unittest.TestCase):
         reminder_loop(store, notify=notify, run_once=True, store_lock=lock, on_error=ignore_error)
 
         self.assertEqual([False], lock_states)
+
+    def test_sound_path_is_passed_to_notification_when_configured(self):
+        store = FakeStore([due_issue("success")])
+        store.sound_path = "D:\\ReminderData\\reminder-sound.mp3"
+        received_sound_paths = []
+
+        def notify(issue, sound_path=None):
+            received_sound_paths.append(sound_path)
+            return True
+
+        reminder_loop(store, notify=notify, run_once=True, on_error=ignore_error)
+
+        self.assertEqual(["D:\\ReminderData\\reminder-sound.mp3"], received_sound_paths)
 
 
 class NotificationTests(unittest.TestCase):
@@ -130,6 +147,23 @@ class NotificationTests(unittest.TestCase):
         self.assertIn("WindowStyle", script)
         self.assertIn("ShowDialog", script)
         self.assertNotIn("MessageBox", script)
+
+    def test_powershell_notification_can_play_configured_mp3_sound(self):
+        class RunningProcess:
+            def wait(self, timeout):
+                raise subprocess.TimeoutExpired("powershell.exe", timeout)
+
+        with patch("challenge_reminder.notifications.sys.platform", "win32"), patch(
+            "challenge_reminder.notifications.subprocess.Popen",
+            return_value=RunningProcess(),
+        ) as popen:
+            notify_issue(due_issue("sound"), sound_path="D:\\ReminderData\\reminder-sound.mp3")
+
+        command = popen.call_args.args[0]
+        encoded_script = command[command.index("-EncodedCommand") + 1]
+        script = base64.b64decode(encoded_script).decode("utf-16le")
+        self.assertIn("MediaPlayer", script)
+        self.assertIn("reminder-sound.mp3", script)
 
 
 class PackagedPathTests(unittest.TestCase):

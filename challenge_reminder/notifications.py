@@ -8,7 +8,7 @@ MAX_MESSAGE_LENGTH = 500
 STARTUP_TIMEOUT_SECONDS = 0.3
 
 
-def notify_issue(issue):
+def notify_issue(issue, sound_path=None):
     title = f"挑战杯提醒：{issue['title']}"
     detail = issue.get("detail") or DEFAULT_MESSAGE
     message = str(detail)[:MAX_MESSAGE_LENGTH]
@@ -18,7 +18,7 @@ def notify_issue(issue):
 
     encoded_title = base64.b64encode(title.encode("utf-8")).decode("ascii")
     encoded_message = base64.b64encode(message.encode("utf-8")).decode("ascii")
-    script = _toast_script(encoded_title, encoded_message)
+    script = _toast_script(encoded_title, encoded_message, sound_path=sound_path)
     encoded_script = base64.b64encode(script.encode("utf-16le")).decode("ascii")
 
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -50,15 +50,35 @@ def notify_issue(issue):
     return False
 
 
-def _toast_script(encoded_title, encoded_message):
-    return "\n".join(
-        [
+def _toast_script(encoded_title, encoded_message, sound_path=None):
+    lines = [
             f"$titleBytes = [Convert]::FromBase64String('{encoded_title}')",
             f"$messageBytes = [Convert]::FromBase64String('{encoded_message}')",
             "$title = [Text.Encoding]::UTF8.GetString($titleBytes)",
             "$message = [Text.Encoding]::UTF8.GetString($messageBytes)",
             "Add-Type -AssemblyName PresentationFramework",
             "Add-Type -AssemblyName PresentationCore",
+    ]
+
+    if sound_path:
+        safe_sound_path = str(sound_path).replace("'", "''")
+        lines.extend(
+            [
+                f"$soundPath = '{safe_sound_path}'",
+                "$player = $null",
+                "if (Test-Path -LiteralPath $soundPath) {",
+                "  try {",
+                "    $player = New-Object System.Windows.Media.MediaPlayer",
+                "    $player.Open([Uri]::new($soundPath))",
+                "    $player.Volume = 1",
+                "    $player.Play()",
+                "  } catch { $player = $null }",
+                "}",
+            ]
+        )
+
+    lines.extend(
+        [
             "$window = New-Object System.Windows.Window",
             "$window.Title = $title",
             "$window.Width = 390",
@@ -116,6 +136,7 @@ def _toast_script(encoded_title, encoded_message):
             "$button.BorderThickness = 0",
             "$button.FontWeight = 'Bold'",
             "$button.Add_Click({ $window.Close() })",
+            "$window.Add_Closed({ if ($player -ne $null) { $player.Stop(); $player.Close() } })",
             "$stack.Children.Add($header) | Out-Null",
             "$stack.Children.Add($titleText) | Out-Null",
             "$stack.Children.Add($messageText) | Out-Null",
@@ -125,3 +146,4 @@ def _toast_script(encoded_title, encoded_message):
             "$window.ShowDialog() | Out-Null",
         ]
     )
+    return "\n".join(lines)

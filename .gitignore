@@ -5,9 +5,11 @@ __pycache__/
 
 data/issues.json
 data/config.json
+data/reminder-sound.mp3
 data/issues.json.corrupt-*
 data/.issues.json.*.tmp
 data/.config.json.*.tmp
+data/.reminder-sound.mp3.tmp
 
 .superpowers/brainstorm/
 .worktrees/

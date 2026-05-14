@@ -159,7 +159,8 @@ h2 {
   margin-bottom: 18px;
 }
 
-.startup-panel {
+.startup-panel,
+.sound-panel {
   margin-bottom: 18px;
 }
 
@@ -184,14 +185,16 @@ h2 {
   font-size: 0.92rem;
 }
 
-.startup-row {
+.startup-row,
+.sound-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: stretch;
 }
 
-.startup-status {
+.startup-status,
+.sound-status {
   font-weight: 900;
 }
 
@@ -206,6 +209,50 @@ h2 {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.sound-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.sound-copy {
+  min-width: 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--panel-strong);
+  line-height: 1.6;
+}
+
+.sound-copy .startup-tip {
+  max-width: 620px;
+  margin-top: 6px;
+}
+
+.sound-toggle {
+  display: inline-flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: #eadfce;
+  font-weight: 900;
+}
+
+.sound-toggle input {
+  width: auto;
+  margin: 0;
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
 }
 
 .app-alert.has-error {
@@ -514,6 +561,7 @@ textarea {
   .data-location-row,
   .manual-location-row,
   .startup-row,
+  .sound-row,
   .issue-form,
   .list-header,
   .issue-top {

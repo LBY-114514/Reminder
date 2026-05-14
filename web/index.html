@@ -71,6 +71,29 @@
         </div>
       </section>
 
+      <section class="panel sound-panel" aria-labelledby="soundTitle">
+        <div class="panel-heading">
+          <span class="badge">音效</span>
+          <h2 id="soundTitle">提醒音效</h2>
+        </div>
+        <div class="sound-row">
+          <div class="sound-copy">
+            <div id="soundStatus" class="sound-status">正在加载音效设置...</div>
+            <p class="startup-tip">选择 mp3 后会复制到当前数据文件夹，原文件之后可以移动或删除。</p>
+          </div>
+          <div class="sound-actions">
+            <label class="sound-toggle">
+              <input id="soundEnabled" type="checkbox" />
+              开启音效
+            </label>
+            <label class="ghost-button file-button">
+              选择 mp3
+              <input id="soundFile" type="file" accept=".mp3,audio/mpeg" hidden />
+            </label>
+          </div>
+        </div>
+      </section>
+
       <section class="panel form-panel" aria-labelledby="formTitle">
         <div class="panel-heading">
           <span class="badge">编辑区</span>

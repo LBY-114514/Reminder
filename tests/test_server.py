@@ -1,4 +1,5 @@
 import http.client
+import base64
 import json
 import socket
 import tempfile
@@ -96,6 +97,28 @@ class FakeStore:
             "cancelled": False,
             "migrated": True,
         }
+
+    def sound_settings(self):
+        return {
+            "enabled": False,
+            "path": "C:\\Data\\reminder-sound.mp3",
+            "exists": False,
+            "file_name": "reminder-sound.mp3",
+        }
+
+    def set_sound_enabled(self, enabled):
+        info = self.sound_settings()
+        info["enabled"] = enabled
+        return info
+
+    def save_sound_file(self, filename, content):
+        if filename != "ok.mp3":
+            raise ValueError("sound file must be an mp3")
+        info = self.sound_settings()
+        info["enabled"] = True
+        info["exists"] = True
+        info["size"] = len(content)
+        return info
 
 
 class RaceyStore(FakeStore):
@@ -386,6 +409,42 @@ class ServerTest(unittest.TestCase):
 
         payload = self.assert_json_response(response, data, 400)
         self.assertEqual({"error": "folder is required"}, payload)
+
+    def test_get_sound_returns_settings(self):
+        response, data = self.request("GET", "/api/sound")
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertEqual("C:\\Data\\reminder-sound.mp3", payload["path"])
+        self.assertFalse(payload["enabled"])
+
+    def test_post_sound_enabled_updates_boolean_setting(self):
+        response, data = self.request(
+            "POST",
+            "/api/sound/enabled",
+            body=json.dumps({"enabled": True}),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertTrue(payload["enabled"])
+
+    def test_post_sound_file_decodes_mp3_upload(self):
+        response, data = self.request(
+            "POST",
+            "/api/sound/file",
+            body=json.dumps(
+                {
+                    "filename": "ok.mp3",
+                    "content_base64": base64.b64encode(b"mp3 bytes").decode("ascii"),
+                }
+            ),
+            headers={"Content-Type": "application/json"},
+        )
+
+        payload = self.assert_json_response(response, data, 200)
+        self.assertTrue(payload["enabled"])
+        self.assertTrue(payload["exists"])
+        self.assertEqual(9, payload["size"])
 
     def raw_request(self, request):
         with socket.create_connection((self.host, self.port), timeout=5) as client:

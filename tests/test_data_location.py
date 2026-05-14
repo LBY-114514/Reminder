@@ -86,6 +86,40 @@ class ConfigurableIssueStoreTest(unittest.TestCase):
             self.assertFalse(info["migrated"])
             self.assertEqual(root / "default" / "issues.json", store.current_data_path())
 
+    def test_save_sound_file_copies_mp3_to_current_data_folder_and_enables_sound(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            store = ConfigurableIssueStore(root / "default" / "issues.json", root / "config.json")
+
+            info = store.save_sound_file("提醒.mp3", b"mp3 bytes")
+
+            sound_path = root / "default" / "reminder-sound.mp3"
+            self.assertTrue(info["enabled"])
+            self.assertTrue(info["exists"])
+            self.assertEqual(sound_path, store.notification_sound_path())
+            self.assertEqual(b"mp3 bytes", sound_path.read_bytes())
+
+    def test_save_sound_file_rejects_non_mp3_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            store = ConfigurableIssueStore(root / "default" / "issues.json", root / "config.json")
+
+            with self.assertRaises(ValueError):
+                store.save_sound_file("提醒.wav", b"not mp3")
+
+    def test_sound_file_migrates_when_data_folder_changes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            store = ConfigurableIssueStore(root / "default" / "issues.json", root / "config.json")
+            store.save_sound_file("提醒.mp3", b"mp3 bytes")
+
+            info = store.set_data_folder(root / "selected")
+
+            migrated_sound = root / "selected" / "reminder-sound.mp3"
+            self.assertTrue(info["sound_migrated"])
+            self.assertEqual(migrated_sound, store.notification_sound_path())
+            self.assertEqual(b"mp3 bytes", migrated_sound.read_bytes())
+
 
 if __name__ == "__main__":
     unittest.main()

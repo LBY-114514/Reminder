@@ -1,6 +1,7 @@
 import json
 import mimetypes
 import threading
+import base64
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -43,6 +44,15 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
                 self._send_json_error(404, "not found")
                 return
             self._send_json(200, self.startup_manager.status())
+            return
+
+        if self.path_info == "/api/sound":
+            if not hasattr(self.store, "sound_settings"):
+                self._send_json_error(404, "not found")
+                return
+            with self.store_lock:
+                info = self.store.sound_settings()
+            self._send_json(200, info)
             return
 
         if self._is_api_path():
@@ -125,6 +135,50 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
             try:
                 info = self.startup_manager.set_enabled(enabled)
             except OSError as exc:
+                self._send_json_error(400, str(exc))
+                return
+
+            self._send_json(200, info)
+            return
+
+        if self.path_info == "/api/sound/enabled":
+            if not hasattr(self.store, "set_sound_enabled"):
+                self._send_json_error(404, "not found")
+                return
+
+            payload = self._read_json_body()
+            if payload is None:
+                return
+
+            enabled = payload.get("enabled")
+            if not isinstance(enabled, bool):
+                self._send_json_error(400, "enabled must be boolean")
+                return
+
+            with self.store_lock:
+                info = self.store.set_sound_enabled(enabled)
+            self._send_json(200, info)
+            return
+
+        if self.path_info == "/api/sound/file":
+            if not hasattr(self.store, "save_sound_file"):
+                self._send_json_error(404, "not found")
+                return
+
+            payload = self._read_json_body()
+            if payload is None:
+                return
+
+            filename = payload.get("filename") or ""
+            content_base64 = str(payload.get("content_base64") or "")
+            if "," in content_base64:
+                content_base64 = content_base64.split(",", 1)[1]
+
+            try:
+                content = base64.b64decode(content_base64, validate=True)
+                with self.store_lock:
+                    info = self.store.save_sound_file(filename, content)
+            except (ValueError, OSError) as exc:
                 self._send_json_error(400, str(exc))
                 return
 

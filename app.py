@@ -120,15 +120,22 @@ def run_reminder_cycle(store, store_lock=None, notify=notify_issue, on_error=Non
 
     with lock:
         issues = due_issues(store.list_issues(), now)
+        sound_path = store.notification_sound_path() if hasattr(store, "notification_sound_path") else None
 
     for issue in issues:
         try:
-            if notify(issue) is not True:
+            if _notify_issue(notify, issue, sound_path) is not True:
                 continue
             with lock:
                 store.mark_notified(issue["id"])
         except Exception:
             on_error()
+
+
+def _notify_issue(notify, issue, sound_path):
+    if sound_path is None:
+        return notify(issue)
+    return notify(issue, sound_path=str(sound_path))
 
 
 def main():
