@@ -17,3 +17,6 @@ data/.reminder-sound.mp3.tmp
 build/
 dist/
 *.spec
+build_exe.bat
+AGENTS.md
+docs/superpowers/
