@@ -25,7 +25,7 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
         if self.path_info == "/api/reminders/due":
             now = datetime.now().astimezone()
             with self.store_lock:
-                issues = due_issues(self.store.list_issues(), now)
+                issues = due_issues(self.store.list_issues(), now, include_notified=True)
             self._send_json(200, issues)
             return
 

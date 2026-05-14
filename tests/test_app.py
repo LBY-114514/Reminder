@@ -1,3 +1,5 @@
+import base64
+import inspect
 import subprocess
 import threading
 import unittest
@@ -26,6 +28,11 @@ class FakeStore:
 
 
 class ReminderLoopTests(unittest.TestCase):
+    def test_default_reminder_interval_is_short_enough_for_near_real_time_alerts(self):
+        interval = inspect.signature(reminder_loop).parameters["interval_seconds"].default
+
+        self.assertLessEqual(interval, 5)
+
     def test_successful_notification_marks_issue_notified(self):
         store = FakeStore([due_issue("success")])
 
@@ -103,6 +110,26 @@ class NotificationTests(unittest.TestCase):
             return_value=RunningProcess(),
         ):
             self.assertTrue(notify_issue(due_issue("running")))
+
+    def test_powershell_notification_uses_custom_toast_window(self):
+        class RunningProcess:
+            def wait(self, timeout):
+                raise subprocess.TimeoutExpired("powershell.exe", timeout)
+
+        with patch("challenge_reminder.notifications.sys.platform", "win32"), patch(
+            "challenge_reminder.notifications.subprocess.Popen",
+            return_value=RunningProcess(),
+        ) as popen:
+            notify_issue(due_issue("toast"))
+
+        command = popen.call_args.args[0]
+        self.assertIn("-STA", command)
+        encoded_script = command[command.index("-EncodedCommand") + 1]
+        script = base64.b64decode(encoded_script).decode("utf-16le")
+        self.assertIn("System.Windows.Window", script)
+        self.assertIn("WindowStyle", script)
+        self.assertIn("ShowDialog", script)
+        self.assertNotIn("MessageBox", script)
 
 
 class PackagedPathTests(unittest.TestCase):

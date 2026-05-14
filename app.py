@@ -89,7 +89,7 @@ def find_server(port=DEFAULT_PORT):
 
 def reminder_loop(
     store,
-    interval_seconds=20,
+    interval_seconds=5,
     stop_event=None,
     store_lock=None,
     notify=notify_issue,

@@ -13,6 +13,9 @@
           <p class="eyebrow">Challenge Cup Reminder</p>
           <h1>挑战杯事项提醒</h1>
           <p class="hero-copy">记录申报、材料和截止时间，按时处理每一条提醒。</p>
+          <p class="close-tip">
+            注意：关闭网页右上角的 × 只会关闭页面，提醒程序仍在后台运行；要彻底关闭，请回到终端窗口按 Ctrl + C。
+          </p>
         </div>
       </header>
 
@@ -109,6 +112,8 @@
         <div id="issueList" class="issue-list">正在加载问题列表...</div>
       </section>
     </main>
+
+    <div id="toastStack" class="toast-stack" aria-live="assertive" aria-label="到期提醒"></div>
 
     <script src="/app.js" defer></script>
   </body>

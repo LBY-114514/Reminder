@@ -86,6 +86,17 @@ h2 {
   color: var(--muted);
 }
 
+.close-tip {
+  margin: 16px 0 0;
+  max-width: 760px;
+  padding: 12px 14px;
+  border: 1px solid rgba(200, 77, 46, 0.24);
+  border-radius: 16px;
+  color: #6f2a1d;
+  background: rgba(255, 226, 194, 0.46);
+  line-height: 1.65;
+}
+
 .notice-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -377,6 +388,121 @@ textarea {
   background: #9f2727;
 }
 
+.toast-stack {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 20;
+  display: grid;
+  gap: 12px;
+  width: min(390px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.reminder-toast {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid rgba(255, 226, 194, 0.18);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, rgba(200, 77, 46, 0.34), transparent 9rem),
+    linear-gradient(135deg, #2b2118 0%, #19130f 100%);
+  box-shadow: 0 24px 64px rgba(25, 18, 12, 0.38);
+  pointer-events: auto;
+  animation: toast-enter 0.28s ease-out both;
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  color: #2b2118;
+  background: #ffd3c2;
+  font-size: 1.35rem;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(200, 77, 46, 0.3);
+}
+
+.toast-content {
+  min-width: 0;
+}
+
+.toast-kicker {
+  color: #ffd3c2;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.reminder-toast h3 {
+  margin: 4px 0 6px;
+  color: #fffaf0;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.reminder-toast p {
+  display: -webkit-box;
+  margin-bottom: 12px;
+  overflow: hidden;
+  color: #eadfce;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toast-primary,
+.toast-ghost,
+.toast-close {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.toast-primary {
+  color: #2b2118;
+  background: #ffd3c2;
+}
+
+.toast-ghost {
+  color: #fffaf0;
+  background: rgba(255, 250, 240, 0.14);
+}
+
+.toast-close {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: #eadfce;
+  background: transparent;
+  font-size: 1.25rem;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translate(18px, -8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
 @media (max-width: 780px) {
   .page-shell {
     width: min(100% - 20px, 1120px);
@@ -401,5 +527,12 @@ textarea {
 
   .notice-grid {
     gap: 12px;
+  }
+
+  .toast-stack {
+    top: 12px;
+    right: 10px;
+    left: 10px;
+    width: auto;
   }
 }

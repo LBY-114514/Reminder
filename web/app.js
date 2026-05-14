@@ -23,6 +23,7 @@ const elements = {
   enableStartup: document.querySelector("#enableStartup"),
   disableStartup: document.querySelector("#disableStartup"),
   issueList: document.querySelector("#issueList"),
+  toastStack: document.querySelector("#toastStack"),
   filterButtons: document.querySelectorAll(".filter-button"),
 };
 
@@ -122,6 +123,36 @@ function setAlert(message, type = "info") {
     elements.appAlert.classList.add("has-due");
   }
   elements.appAlert.textContent = message;
+}
+
+function dismissDueToast(issueId) {
+  const toast = elements.toastStack.querySelector(`[data-toast-id="${CSS.escape(issueId)}"]`);
+  if (toast) {
+    toast.remove();
+  }
+}
+
+function showDueToasts(issues) {
+  issues.forEach((issue) => {
+    dismissDueToast(issue.id);
+    const toast = document.createElement("article");
+    toast.className = "reminder-toast";
+    toast.dataset.toastId = issue.id;
+    toast.innerHTML = `
+      <div class="toast-icon" aria-hidden="true">!</div>
+      <div class="toast-content">
+        <div class="toast-kicker">到期提醒</div>
+        <h3>${escapeHtml(issue.title)}</h3>
+        <p>${escapeHtml(issue.detail || "记得查看这条记录。")}</p>
+        <div class="toast-actions">
+          <button type="button" class="toast-primary" data-toast-action="view" data-id="${escapeHtml(issue.id)}">查看</button>
+          <button type="button" class="toast-ghost" data-toast-action="done" data-id="${escapeHtml(issue.id)}">标记已处理</button>
+          <button type="button" class="toast-close" data-toast-action="close" data-id="${escapeHtml(issue.id)}" aria-label="关闭提醒">×</button>
+        </div>
+      </div>
+    `;
+    elements.toastStack.prepend(toast);
+  });
 }
 
 function renderLoadFailure() {
@@ -322,6 +353,7 @@ async function handleListClick(event) {
       if (state.editingId === id) {
         resetForm();
       }
+      dismissDueToast(id);
       setAlert("已标记为处理完成。");
     }
 
@@ -330,6 +362,7 @@ async function handleListClick(event) {
       if (state.editingId === id) {
         resetForm();
       }
+      dismissDueToast(id);
       setAlert("提醒已删除。");
     }
 
@@ -358,6 +391,7 @@ async function pollDueReminders() {
     const newDueIssues = dueIssues.filter((issue) => !state.displayedDueIssueIds.has(issue.id));
     newDueIssues.forEach((issue) => state.displayedDueIssueIds.add(issue.id));
     if (newDueIssues.length > 0) {
+      showDueToasts(newDueIssues);
       setAlert(
         `有 ${newDueIssues.length} 条提醒已到期：${newDueIssues.map((issue) => issue.title).join("、")}`,
         "due",
@@ -366,6 +400,41 @@ async function pollDueReminders() {
     }
   } catch (error) {
     setAlert(`检查到期提醒失败：${error.message}`, "error");
+  }
+}
+
+async function handleToastClick(event) {
+  const button = event.target.closest("button[data-toast-action]");
+  if (!button) {
+    return;
+  }
+
+  const { toastAction, id } = button.dataset;
+  if (toastAction === "close") {
+    dismissDueToast(id);
+    return;
+  }
+
+  if (toastAction === "view") {
+    const cardButton = elements.issueList.querySelector(`[data-action="edit"][data-id="${CSS.escape(id)}"]`);
+    if (cardButton) {
+      cardButton.closest(".issue-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    return;
+  }
+
+  if (toastAction === "done") {
+    try {
+      await apiRequest(`/api/issues/${encodeURIComponent(id)}/done`, { method: "POST" });
+      dismissDueToast(id);
+      if (state.editingId === id) {
+        resetForm();
+      }
+      await loadIssues();
+      setAlert("已标记为处理完成。");
+    } catch (error) {
+      setAlert(`操作失败：${error.message}`, "error");
+    }
   }
 }
 
@@ -441,7 +510,8 @@ elements.changeDataLocation.addEventListener("click", handleChangeDataLocation);
 elements.saveManualDataFolder.addEventListener("click", handleSaveManualDataFolder);
 elements.enableStartup.addEventListener("click", () => setStartupEnabled(true));
 elements.disableStartup.addEventListener("click", () => setStartupEnabled(false));
+elements.toastStack.addEventListener("click", handleToastClick);
 document.querySelector(".filters").addEventListener("click", handleFilterClick);
 
 Promise.all([loadIssues(), loadDataLocation(), loadStartup()]).then(pollDueReminders);
-window.setInterval(pollDueReminders, 30000);
+window.setInterval(pollDueReminders, 5000);
