@@ -14,5 +14,5 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-python app.py
+pythonw app.py
 pause

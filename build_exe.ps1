@@ -17,6 +17,9 @@ pyinstaller `
   --add-data "web;web" `
   --hidden-import "tkinter" `
   --hidden-import "tkinter.filedialog" `
+  --hidden-import "pystray" `
+  --hidden-import "PIL._imaging" `
+  --add-data "assets\reminder-icon.ico;assets" `
   app.py
 
 if ($LASTEXITCODE -ne 0) {

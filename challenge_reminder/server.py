@@ -16,7 +16,18 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
     web_dir = None
     startup_manager = None
 
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def do_GET(self):
+        if self.path_info == "/dashboard" or self.path_info == "/dashboard.html":
+            self._serve_dashboard()
+            return
+
         if self.path_info == "/api/issues":
             with self.store_lock:
                 issues = self.store.list_issues()
@@ -292,6 +303,18 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
 
         return payload
 
+    def _serve_dashboard(self):
+        dash_path = Path(self.web_dir) / "dashboard.html"
+        if not dash_path.is_file():
+            self.send_error(404)
+            return
+        content = dash_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
     def _serve_static(self):
         path = self.path_info
         if path == "/":
@@ -324,6 +347,7 @@ class ChallengeReminderHandler(BaseHTTPRequestHandler):
         content = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
         if include_body:

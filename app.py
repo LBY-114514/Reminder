@@ -138,7 +138,50 @@ def _notify_issue(notify, issue, sound_path):
     return notify(issue, sound_path=str(sound_path))
 
 
+def _get_icon_path():
+    return str(get_resource_root() / "assets" / "reminder-icon.ico")
+
+
+def _create_tray_icon(store, port, stop_event, server):
+    import pystray
+    from PIL import Image
+
+    image = Image.open(_get_icon_path())
+    url = f"http://localhost:{port}"
+
+    def open_ui():
+        webbrowser.open(url)
+
+    def open_data_folder():
+        data_dir = str(store.current_data_path().parent)
+        os.startfile(data_dir)
+
+    def on_quit(icon):
+        _shutdown(icon, stop_event, server)
+
+    menu = pystray.Menu(
+        pystray.MenuItem("打开界面", open_ui, default=True),
+        pystray.MenuItem("数据文件夹", open_data_folder),
+        pystray.MenuItem("退出", on_quit),
+    )
+    return pystray.Icon("挑战杯提醒", image, "挑战杯提醒", menu)
+
+
+def _shutdown(icon, stop_event, server):
+    stop_event.set()
+    server.shutdown()
+    server.server_close()
+    icon.stop()
+
+
 def main():
+    try:
+        _main_impl()
+    except Exception:
+        _write_crash_log()
+
+
+def _main_impl():
     server = find_server()
     port = server.server_address[1]
     store = server.issue_store
@@ -160,19 +203,25 @@ def main():
     url = f"http://localhost:{port}"
     print(f"挑战杯提醒已启动：{url}")
     print(f"数据文件：{store.current_data_path()}")
+
+    icon = _create_tray_icon(store, port, stop_event, server)
+
     if should_open_browser():
         webbrowser.open(url)
 
     try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n正在关闭挑战杯提醒...")
+        icon.run()
+    finally:
         stop_event.set()
-        server.shutdown()
-        server.server_close()
         reminder_thread.join(timeout=interval_join_timeout())
         server_thread.join(timeout=interval_join_timeout())
+
+
+def _write_crash_log():
+    import traceback as tb
+    log_path = Path.home() / "Desktop" / "挑战杯提醒-错误日志.txt"
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write(tb.format_exc())
 
 
 def interval_join_timeout():
@@ -192,5 +241,16 @@ class _NullLock:
         return False
 
 
+def _entry():
+    try:
+        main()
+    except Exception:
+        import traceback as tb
+        log_path = Path.home() / "Desktop" / "挑战杯提醒-错误日志.txt"
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(tb.format_exc())
+        raise
+
+
 if __name__ == "__main__":
-    main()
+    _entry()
